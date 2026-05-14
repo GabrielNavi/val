@@ -1,0 +1,24 @@
+Source: vx-dga-l-vcd
+Section: admin
+Priority: optional
+Maintainer: Gabriel Navia <correos@gabrielnav.es>
+Standards-Version: 4.6.0
+Build-Depends: debhelper-compat (= 13)
+
+Package: vx-dga-l-vcd
+Architecture: all
+Depends: bash, curl, jq, coreutils
+Recommends: vx-dga-l-vas | vx-dga-l-vac
+Description: Vitalinux Consumer Daemon
+ Daemon generico que observa cambios de version en el inventario de VAS o VAC
+ y distribuye el resultado filtrado a hooks configurables mediante tuberias.
+ .
+ Soporta dos modos de operacion:
+  SOURCE=vas  Consulta VAS directamente via HTTP.
+  SOURCE=vac  Lee la copia local del inventario descargada por VAC.
+ .
+ El filtro de clientes puede ser active, inactive o all. Los hooks en
+ hooks.d/ reciben el inventario JSON por stdin junto con las variables
+ de entorno VCD_VERSION, VCD_FILTER y VCD_SOURCE.
+ .
+ No modifica ni requiere cambios en VAS ni en VAC.

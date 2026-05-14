@@ -1,0 +1,3 @@
+usr/bin/vcd usr/bin/
+etc/vcd/vcd.conf etc/vcd/
+lib/systemd/system/vcd.service lib/systemd/system/

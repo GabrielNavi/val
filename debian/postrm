@@ -1,0 +1,13 @@
+#!/bin/sh
+set -e
+
+echo "[vcd] Ejecutando postrm..."
+
+if [ "$1" = "purge" ]; then
+    rm -rf /var/lib/vcd
+    rm -rf /etc/vcd
+fi
+
+systemctl daemon-reload || true
+
+exit 0

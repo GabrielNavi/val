@@ -1,0 +1,18 @@
+#!/bin/sh
+set -e
+
+echo "[vcd] Ejecutando postinst..."
+
+mkdir -p /etc/vcd/vcd.conf.d
+mkdir -p /etc/vcd/hooks.d
+mkdir -p /var/lib/vcd
+
+if [ ! -f /var/lib/vcd/version ]; then
+    echo "0" > /var/lib/vcd/version
+fi
+
+systemctl daemon-reload || true
+systemctl enable vcd.service || true
+systemctl restart vcd.service || true
+
+echo "[vcd] Instalacion completada."

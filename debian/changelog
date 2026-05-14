@@ -1,0 +1,20 @@
+vx-dga-l-vcd (0.2-1) unstable; urgency=medium
+
+  * Diseño extrapolado de VAC y VVS
+    Daemon generico que observa cambios de version en VAS o VAC y distribuye
+    el inventario filtrado (active/inactive/all) a hooks via stdin.
+    Soporta overlays de configuracion en vcd.conf.d/.
+
+ -- Gabriel Navia <correos@gabrielnav.es>  Thu, 14 May 2026 00:00:00 +0000
+
+vx-dga-l-vcd (0.1-2) unstable; urgency=medium
+
+  * Definicion de las funcionalidades de VCD y filtros de uso
+
+ -- Gabriel Navia <correos@gabrielnav.es>  Thu, 14 May 2026 00:00:00 +0000
+
+vx-dga-l-vcd (0.1-1) unstable; urgency=medium
+
+  * Initial release.
+
+ -- Gabriel Navia <correos@gabrielnav.es>  Thu, 14 May 2026 00:00:00 +0000

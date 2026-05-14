@@ -1,0 +1,293 @@
+#!/bin/bash
+# vcd — Vitalinux Consumer Daemon
+#
+# Daemon que observa cambios de versión en el inventario de VAS o VAC y
+# distribuye el inventario filtrado a los hooks configurados en hooks.d/.
+#
+# Modos de fuente:
+#   SOURCE=vas  → consulta VAS directamente via HTTP
+#   SOURCE=vac  → lee los ficheros locales escritos por VAC
+#
+# Filtros de clientes:
+#   FILTER=active    → solo clientes activos (SOURCE=vas y SOURCE=vac)
+#   FILTER=inactive  → solo clientes inactivos (requiere SOURCE=vas)
+#   FILTER=all       → todos los clientes (requiere SOURCE=vas)
+#
+# Hooks: scripts ejecutables en HOOKS_DIR.
+#   Reciben el JSON del inventario por stdin.
+#   Variables de entorno disponibles: VCD_VERSION, VCD_FILTER, VCD_SOURCE.
+#   Retorno != 0 → warning en log, continúa con el siguiente hook.
+#
+# Journalctl: journalctl -u vcd -f
+#   Filtrar errores: journalctl -u vcd -f | grep "\[VCD-ERROR\]"
+
+set -euo pipefail
+
+# ---------------------------------------------------------------------------
+# Rutas y valores por defecto
+# ---------------------------------------------------------------------------
+CONF_FILE="/etc/vcd/vcd.conf"
+CONF_DIR="/etc/vcd/vcd.conf.d"
+STATE_DIR="/var/lib/vcd"
+VERSION_FILE="${STATE_DIR}/version"
+CLIENTS_FILE="${STATE_DIR}/clients.json"
+TMP_CLIENTS="${STATE_DIR}/clients.json.tmp"
+
+SOURCE="vas"
+VAS_HOST=""
+VAC_STATE_DIR="/var/lib/vac"
+FILTER="active"
+CHECK_SECONDS=300
+RETRY_SECONDS=60
+HOOKS_DIR="/etc/vcd/hooks.d"
+
+# ---------------------------------------------------------------------------
+# Carga de configuración
+# ---------------------------------------------------------------------------
+
+# Parser seguro: lee clave=valor sin ejecutar código del fichero.
+# Solo acepta las variables conocidas; el resto se ignora.
+load_conf() {
+    local file="$1"
+    [ -f "$file" ] || return 0
+
+    local loaded=0
+    while IFS='=' read -r key val; do
+        key="$(echo "$key" | xargs 2>/dev/null || true)"
+        val="$(echo "$val" | xargs 2>/dev/null | sed 's/^"//; s/"$//' || true)"
+        [ -z "$key" ] && continue
+
+        case "$key" in
+            SOURCE)         SOURCE="$val";         (( ++loaded )) ;;
+            VAS_HOST)       VAS_HOST="$val";       (( ++loaded )) ;;
+            VAC_STATE_DIR)  VAC_STATE_DIR="$val";  (( ++loaded )) ;;
+            FILTER)         FILTER="$val";         (( ++loaded )) ;;
+            CHECK_SECONDS)  CHECK_SECONDS="$val";  (( ++loaded )) ;;
+            RETRY_SECONDS)  RETRY_SECONDS="$val";  (( ++loaded )) ;;
+            HOOKS_DIR)      HOOKS_DIR="$val";      (( ++loaded )) ;;
+        esac
+    done < <(grep -v '^\s*#' "$file" | grep '=' || true)
+
+    echo "[VCD] Config cargada desde $file: $loaded clave(s)"
+}
+
+load_conf "$CONF_FILE"
+
+# Overlays en conf.d/ en orden lexical
+if [[ -d "$CONF_DIR" ]]; then
+    for cfg in "$CONF_DIR"/*.conf; do
+        [[ -f "$cfg" ]] || continue
+        load_conf "$cfg"
+    done
+fi
+
+# ---------------------------------------------------------------------------
+# Inicialización del estado local
+# ---------------------------------------------------------------------------
+mkdir -p "$STATE_DIR"
+
+if [[ ! -f "$VERSION_FILE" ]]; then
+    echo "0" > "$VERSION_FILE"
+    echo "[VCD] Fichero de versión inicializado: $VERSION_FILE → 0"
+fi
+
+# ---------------------------------------------------------------------------
+# Logging
+# ---------------------------------------------------------------------------
+log() {
+    echo "[VCD] $*"
+}
+
+# ---------------------------------------------------------------------------
+# Validación de configuración
+# ---------------------------------------------------------------------------
+log "=== Iniciando vcd ==="
+log "SOURCE:         $SOURCE"
+log "FILTER:         $FILTER"
+log "CHECK:          ${CHECK_SECONDS}s"
+log "RETRY:          ${RETRY_SECONDS}s"
+log "HOOKS_DIR:      $HOOKS_DIR"
+log "STATE_DIR:      $STATE_DIR"
+[[ "$SOURCE" == "vas" ]] && log "VAS_HOST:       ${VAS_HOST:-'(no definido)'}"
+[[ "$SOURCE" == "vac" ]] && log "VAC_STATE_DIR:  $VAC_STATE_DIR"
+
+case "$FILTER" in
+    active|inactive|all) ;;
+    *)
+        log "ERROR: FILTER inválido: '$FILTER'. Valores válidos: active, inactive, all."
+        exit 1
+        ;;
+esac
+
+# SOURCE=vac solo tiene clientes activos; avisar si se pide otro filtro
+if [[ "$SOURCE" == "vac" && "$FILTER" != "active" ]]; then
+    log "AVISO: SOURCE=vac descarga solo clientes activos. FILTER=$FILTER puede dar resultados incompletos."
+fi
+
+# ---------------------------------------------------------------------------
+# Funciones principales
+# ---------------------------------------------------------------------------
+
+# Obtiene la versión remota según SOURCE.
+# Devuelve cadena vacía si la consulta falla.
+get_remote_version() {
+    local ver=""
+    case "$SOURCE" in
+        vas)
+            ver="$(curl -fsS --max-time 10 --connect-timeout 5 \
+                "${VAS_HOST%/}/version" 2>/dev/null \
+                | jq -r '.version' 2>/dev/null \
+                || echo "")"
+            log "[VERSION] Versión remota (VAS): ${ver:-(vacía)}"
+            ;;
+        vac)
+            local vac_version="${VAC_STATE_DIR}/version"
+            if [[ -f "$vac_version" ]]; then
+                ver="$(tr -d '[:space:]' < "$vac_version")"
+                log "[VERSION] Versión remota (VAC fichero): ${ver:-(vacía)}"
+            else
+                log "[VERSION] Fichero VAC no encontrado: $vac_version"
+            fi
+            ;;
+        *)
+            log "[VERSION] SOURCE desconocido: '$SOURCE'. Valores válidos: vas, vac."
+            ;;
+    esac
+    echo "$ver"
+}
+
+# Obtiene el inventario filtrado y lo guarda en CLIENTS_FILE.
+# Con SOURCE=vas añade ?status=<FILTER> salvo para active (por defecto).
+# Con SOURCE=vac copia el fichero de VAC tal cual.
+# Devuelve 1 si falla.
+fetch_clients() {
+    case "$SOURCE" in
+        vas)
+            local url="${VAS_HOST%/}/clients"
+            [[ "$FILTER" != "active" ]] && url="${url}?status=${FILTER}"
+            log "[FETCH] Descargando inventario desde $url"
+            if curl -fsS --max-time 15 --connect-timeout 5 \
+                "$url" -o "$TMP_CLIENTS" 2>/dev/null; then
+                local count
+                count="$(jq '.clients | length' "$TMP_CLIENTS" 2>/dev/null || echo '?')"
+                mv "$TMP_CLIENTS" "$CLIENTS_FILE"
+                log "[FETCH] Inventario guardado: $CLIENTS_FILE ($count equipo(s), filter=$FILTER)"
+                return 0
+            else
+                log "[VCD-ERROR] Error descargando inventario desde VAS. CLIENTS_FILE no modificado."
+                rm -f "$TMP_CLIENTS"
+                return 1
+            fi
+            ;;
+        vac)
+            local vac_clients="${VAC_STATE_DIR}/clients.json"
+            if [[ -f "$vac_clients" ]]; then
+                cp "$vac_clients" "$CLIENTS_FILE"
+                local count
+                count="$(jq '.clients | length' "$CLIENTS_FILE" 2>/dev/null || echo '?')"
+                log "[FETCH] Inventario copiado desde VAC: $CLIENTS_FILE ($count equipo(s))"
+                return 0
+            else
+                log "[VCD-ERROR] No se encontró ${vac_clients}. ¿Está VAC instalado y activo?"
+                return 1
+            fi
+            ;;
+    esac
+}
+
+# Ejecuta en orden lexical todos los scripts ejecutables de HOOKS_DIR.
+# Cada hook recibe el inventario JSON por stdin y las variables de entorno:
+#   VCD_VERSION → versión que disparó la ejecución
+#   VCD_FILTER  → filtro activo (active/inactive/all)
+#   VCD_SOURCE  → fuente usada (vas/vac)
+# Un hook que devuelve error no interrumpe la cadena.
+dispatch_hooks() {
+    local version="$1"
+
+    if [[ ! -d "$HOOKS_DIR" ]]; then
+        log "[HOOKS] Directorio de hooks no encontrado: $HOOKS_DIR"
+        return 0
+    fi
+
+    local hook_count=0
+    local hook_errors=0
+
+    for hook in "$HOOKS_DIR"/*; do
+        [[ -f "$hook" && -x "$hook" ]] || continue
+        (( ++hook_count ))
+        log "[HOOKS] Ejecutando: $(basename "$hook")"
+        if VCD_VERSION="$version" VCD_FILTER="$FILTER" VCD_SOURCE="$SOURCE" \
+            "$hook" < "$CLIENTS_FILE"; then
+            log "[HOOKS] OK: $(basename "$hook")"
+        else
+            log "[VCD-ERROR] Hook $(basename "$hook") terminó con error. Continuando."
+            (( ++hook_errors ))
+        fi
+    done
+
+    if [[ $hook_count -eq 0 ]]; then
+        log "[HOOKS] Sin hooks ejecutables en $HOOKS_DIR"
+    else
+        log "[HOOKS] $hook_count hook(s) ejecutado(s), $hook_errors error(es)"
+    fi
+}
+
+# ---------------------------------------------------------------------------
+# Bucle principal
+# ---------------------------------------------------------------------------
+while true; do
+
+    cycle_start="$(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+    log "--- Ciclo iniciado: $cycle_start ---"
+
+    # Guardia: SOURCE=vas requiere VAS_HOST
+    if [[ "$SOURCE" == "vas" && -z "$VAS_HOST" ]]; then
+        log "VAS_HOST no definido con SOURCE=vas. Esperando ${RETRY_SECONDS}s."
+        sleep "$RETRY_SECONDS"
+        continue
+    fi
+
+    # --- Paso 1: Comparar versiones ------------------------------------------
+    local_version="$(tr -d '[:space:]' < "$VERSION_FILE")"
+    log "[VERSION] Versión local: $local_version"
+
+    remote_version="$(get_remote_version)"
+
+    if [[ -z "$remote_version" ]]; then
+        log "[VERSION] No se pudo obtener versión remota. Reintentando en ${RETRY_SECONDS}s."
+        sleep "$RETRY_SECONDS"
+        continue
+    fi
+
+    # Rechazar versiones malformadas (deben ser numéricas: YYYYMMDDHHMMSS)
+    if [[ ! "$remote_version" =~ ^[0-9]+$ ]]; then
+        log "[VERSION] Versión remota inválida: '$remote_version'. Reintentando en ${RETRY_SECONDS}s."
+        sleep "$RETRY_SECONDS"
+        continue
+    fi
+
+    if [[ "$remote_version" == "$local_version" ]]; then
+        log "[VERSION] Sin cambios. Próxima comprobación en ${CHECK_SECONDS}s."
+        sleep "$CHECK_SECONDS"
+        continue
+    fi
+
+    log "[SYNC] Nueva versión detectada: $local_version → $remote_version"
+
+    # --- Paso 2: Obtener inventario ------------------------------------------
+    if ! fetch_clients; then
+        log "[VCD-ERROR] No se pudo obtener el inventario. Reintentando en ${RETRY_SECONDS}s."
+        sleep "$RETRY_SECONDS"
+        continue
+    fi
+
+    # --- Paso 3: Distribuir a hooks ------------------------------------------
+    dispatch_hooks "$remote_version"
+
+    # Actualizar versión local solo si la distribución completó sin abortar
+    echo "$remote_version" > "$VERSION_FILE"
+    log "[SYNC] Versión local actualizada: $remote_version"
+
+    log "--- Ciclo completado. Próxima comprobación en ${CHECK_SECONDS}s. ---"
+    sleep "$CHECK_SECONDS"
+done

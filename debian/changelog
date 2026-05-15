@@ -1,3 +1,12 @@
+vx-dga-l-vcd (0.2-5) unstable; urgency=high
+
+  * LA funcion log() redirigido a stderr (>&2) para evitar contaminación de stdout
+    en get_remote_version(), que se invoca con $() y captura todo stdout.
+    El bug provocaba que la versión remota fuera rechazada siempre por la
+    validación ^[0-9]+$ al incluir el mensaje de log en la cadena capturada.
+
+ -- Gabriel Navia <correos@gabrielnav.es>  Thu, 15 May 2026 15:00:00 +0200
+
 vx-dga-l-vcd (0.2-4) unstable; urgency=low
 
   * postinst: corregido arranque del servicio; instalación nueva usa start

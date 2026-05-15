@@ -32,6 +32,7 @@ No modifica ni requiere cambios en VAS ni en VAC.
 | Ruta | Descripción |
 |---|---|
 | `/usr/bin/vcd` | Daemon principal |
+| `/usr/share/vcd/vcd.conf.defaults` | Referencia de valores por defecto (solo lectura) |
 | `/etc/vcd/vcd.conf` | Configuración principal |
 | `/etc/vcd/vcd.conf.d/` | Overlays de configuración (orden lexical) |
 | `/etc/vcd/hooks.d/` | Scripts hook ejecutables |

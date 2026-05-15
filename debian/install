@@ -1,3 +1,4 @@
 usr/bin/vcd usr/bin/
 etc/vcd/vcd.conf etc/vcd/
 lib/systemd/system/vcd.service lib/systemd/system/
+usr/share/vcd/vcd.conf.defaults usr/share/vcd/

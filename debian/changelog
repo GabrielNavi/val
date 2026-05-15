@@ -1,3 +1,14 @@
+vx-dga-l-vcd (0.2-3) unstable; urgency=low
+
+  * Añadido /usr/share/vcd/vcd.conf.defaults: copia de referencia de la
+    configuración por defecto, siempre actualizada en upgrade.
+    Permite comparar con la configuración activa:
+    diff /etc/vcd/vcd.conf /usr/share/vcd/vcd.conf.defaults
+  * postinst: corregido arranque del servicio; instalación nueva usa start
+    en lugar de restart incondicionalmente (parity con VAC y VAS).
+
+ -- Gabriel Navia <correos@gabrielnav.es>  Fri, 15 May 2026 12:00:00 +0200
+
 vx-dga-l-vcd (0.2-2) unstable; urgency=low
 
   * Actualizado comentario de validación de versión a YYYYMMDDHHMMSSmmm.

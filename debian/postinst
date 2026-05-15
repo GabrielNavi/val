@@ -13,6 +13,13 @@ fi
 
 systemctl daemon-reload || true
 systemctl enable vcd.service || true
-systemctl restart vcd.service || true
+
+if [ "$1" = "configure" ]; then
+    if [ -n "${2:-}" ]; then
+        systemctl restart vcd.service || true
+    else
+        systemctl start vcd.service || true
+    fi
+fi
 
 echo "[vcd] Instalacion completada."

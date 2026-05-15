@@ -259,7 +259,7 @@ while true; do
         continue
     fi
 
-    # Rechazar versiones malformadas (deben ser numéricas: YYYYMMDDHHMMSS)
+    # Rechazar versiones malformadas (deben ser numéricas: YYYYMMDDHHMMSSmmm)
     if [[ ! "$remote_version" =~ ^[0-9]+$ ]]; then
         log "[VERSION] Versión remota inválida: '$remote_version'. Reintentando en ${RETRY_SECONDS}s."
         sleep "$RETRY_SECONDS"

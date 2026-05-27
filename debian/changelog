@@ -1,4 +1,4 @@
-vx-dga-l-vcd (1.0-1~rc) unstable; urgency=medium
+vx-dga-l-vcd (0.9-1~rc) unstable; urgency=medium
 
   * Filtrado por clave extra (GLOBAL_KEY): VCD envía ?extra_key=KEY a VAS,
     reduciendo el tráfico de red al inventario relevante para el consumidor.

@@ -6,8 +6,9 @@ Wants=network-online.target
 [Service]
 Type=simple
 ExecStart=/usr/bin/vcd-sub-manager
-Restart=on-failure
+Restart=always
 RestartSec=30
+RuntimeDirectory=vcd
 
 [Install]
 WantedBy=multi-user.target

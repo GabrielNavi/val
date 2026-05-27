@@ -11,6 +11,7 @@
 # Filtros de clientes:
 #   FILTER=active    → solo clientes activos (SOURCE=vas y SOURCE=vac)
 #   FILTER=inactive  → solo clientes inactivos (requiere SOURCE=vas)
+#   FILTER=archived  → solo clientes archivados (requiere SOURCE=vas)
 #   FILTER=all       → todos los clientes (requiere SOURCE=vas)
 #
 # Hooks: scripts ejecutables en HOOKS_DIR.
@@ -137,9 +138,9 @@ if [[ "$PARALLELIZATION" == "true" ]]; then
 fi
 
 case "$FILTER" in
-    active|inactive|all) ;;
+    active|inactive|archived|all) ;;
     *)
-        log "ERROR: FILTER inválido: '$FILTER'. Valores válidos: active, inactive, all."
+        log "ERROR: FILTER inválido: '$FILTER'. Valores válidos: active, inactive, archived, all."
         exit 1
         ;;
 esac

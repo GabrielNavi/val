@@ -125,9 +125,9 @@ log "BUMP_LISTEN_PORT: $BUMP_LISTEN_PORT ($([ "$BUMP_LISTEN_PORT" != "0" ] && ec
 [[ "$SOURCE" == "vac" ]] && log "VAC_STATE_DIR:    $VAC_STATE_DIR"
 
 case "$FILTER" in
-    active|inactive|all) ;;
+    active|inactive|archived|all) ;;
     *)
-        log "ERROR: FILTER inválido: '$FILTER'. Valores válidos: active, inactive, all."
+        log "ERROR: FILTER inválido: '$FILTER'. Valores válidos: active, inactive, archived, all."
         exit 1
         ;;
 esac

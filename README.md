@@ -24,9 +24,10 @@ No modifica ni requiere cambios en VAS ni en VAC.
 |---|---|---|
 | `active` | Solo activos | `vas` y `vac` |
 | `inactive` | Solo inactivos | Solo `vas` |
+| `archived` | Solo archivados | Solo `vas` |
 | `all` | Todos | Solo `vas` |
 
-> Con `SOURCE=vac`, VAC descarga únicamente clientes activos. `FILTER=inactive` o `FILTER=all` pueden dar resultados incompletos.
+> Con `SOURCE=vac`, VAC descarga únicamente clientes activos. `FILTER=inactive`, `FILTER=archived` o `FILTER=all` pueden dar resultados incompletos.
 
 ## Archivos instalados
 
@@ -64,7 +65,7 @@ sudo systemctl restart vcd
 |---|---|---|
 | `SOURCE` | `vas` | Fuente de datos: `vas` o `vac` |
 | `VAS_HOST` | `http://127.0.0.1:8000` | URL del servidor VAS (solo `SOURCE=vas`) |
-| `FILTER` | `active` | Filtro de clientes: `active`, `inactive`, `all` |
+| `FILTER` | `active` | Filtro de clientes: `active`, `inactive`, `archived`, `all` |
 | `CHECK_SECONDS` | `300` | Intervalo entre comprobaciones de versión |
 | `RETRY_SECONDS` | `60` | Espera ante errores de conexión o hooks fallidos |
 | `HOOKS_DIR` | `/etc/vcd/hooks.d` | Directorio con los scripts hook |
@@ -84,7 +85,7 @@ Los scripts de `hooks.d/` se ejecutan en **orden lexical**. Un hook que falla no
 - **Stdin**: inventario JSON (`{ "clients": [...] }`) si `DISPATCH_STDIN=true`; vacío si `false`.
 - **Variables de entorno**:
   - `VCD_VERSION` → versión que disparó la ejecución
-  - `VCD_FILTER` → filtro activo (`active`/`inactive`/`all`)
+  - `VCD_FILTER` → filtro activo (`active`/`inactive`/`archived`/`all`)
   - `VCD_SOURCE` → fuente usada (`vas`/`vac`)
   - `VCD_EXTRA_KEY` → valor de `GLOBAL_KEY` aplicado al stdin (vacío si sin filtro)
   - `VCD_STATE_DIR` → directorio de estado con los ficheros `KEY_clients.json`
@@ -160,8 +161,9 @@ BUMP_LISTEN_PORT=9876
 ```
 
 Requiere:
-1. El hook `vcd-local` activo en VAS (`/etc/vas/hooks.d/vcd-local`).
-2. Que el equipo cliente haya publicado `inform.url` en VAC:
+1. El paquete `netcat-openbsd` instalado en el sistema VCD (se instala como `Recommends`).
+2. El hook `vcd-local` activo en VAS (`/etc/vas/hooks.d/vcd-local`).
+3. Que el equipo cliente haya publicado `inform.url` en VAC:
    ```bash
    echo '{"url":"IP_VCD:9876"}' | vac-register --imperative --key inform -
    ```

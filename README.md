@@ -1,14 +1,15 @@
 # vx-dga-l-vcd — Vitalinux Consumer Daemon
 
-Daemon genérico que observa cambios de versión en el inventario de **VAS** o **VAC** y distribuye el resultado filtrado a hooks configurables mediante tuberías.
+Daemon genérico que observa cambios de versión en el inventario de **VAS** o **VAC** y distribuye el resultado a hooks configurables.
 
 No modifica ni requiere cambios en VAS ni en VAC.
 
 ## ¿Qué hace?
 
 1. Compara periódicamente la versión remota del inventario con la última conocida.
-2. Si detecta un cambio, descarga el inventario filtrado.
-3. Ejecuta en orden lexical todos los scripts ejecutables de `hooks.d/`, pasando el JSON por stdin.
+2. Si detecta un cambio, descarga el inventario (opcionalmente filtrado por `GLOBAL_KEY`).
+3. Materializa vistas locales por clave (`LOCAL_KEY_LIST`) en `STATE_DIR/KEY_clients.json`.
+4. Ejecuta en orden lexical todos los scripts ejecutables de `hooks.d/`.
 
 ## Modos de fuente
 
@@ -38,6 +39,7 @@ No modifica ni requiere cambios en VAS ni en VAC.
 | `/etc/vcd/hooks.d/` | Scripts hook ejecutables |
 | `/var/lib/vcd/version` | Última versión procesada |
 | `/var/lib/vcd/clients.json` | Último inventario descargado |
+| `/var/lib/vcd/KEY_clients.json` | Vista por clave (una por entrada en `LOCAL_KEY_LIST`) |
 
 ## Configuración
 
@@ -60,6 +62,9 @@ sudo systemctl restart vcd
 | `RETRY_SECONDS` | `60` | Espera ante errores de conexión o hooks fallidos |
 | `HOOKS_DIR` | `/etc/vcd/hooks.d` | Directorio con los scripts hook |
 | `VAC_STATE_DIR` | `/var/lib/vac` | Directorio de estado de VAC (solo `SOURCE=vac`) |
+| `GLOBAL_KEY` | _(vacío)_ | Clave enviada a VAS como `?extra_key=KEY`; reduce tráfico descargando solo clientes que tengan esa clave. Solo `SOURCE=vas`. |
+| `LOCAL_KEY_LIST` | _(vacío)_ | Claves separadas por espacios. VCD escribe `STATE_DIR/KEY_clients.json` por cada una tras cada descarga. |
+| `DISPATCH_STDIN` | `true` | `true`: hooks reciben el inventario por stdin (compat). `false`: stdin vacío; hooks leen `VCD_STATE_DIR/KEY_clients.json`. |
 
 ## Hooks
 
@@ -67,26 +72,47 @@ Los scripts de `hooks.d/` se ejecutan en **orden lexical**. Un hook que falla no
 
 ### Contrato de un hook
 
-- **Stdin**: inventario JSON completo (`{ "clients": [...] }`)
+- **Stdin**: inventario JSON (`{ "clients": [...] }`) si `DISPATCH_STDIN=true`; vacío si `false`.
 - **Variables de entorno**:
   - `VCD_VERSION` → versión que disparó la ejecución
   - `VCD_FILTER` → filtro activo (`active`/`inactive`/`all`)
   - `VCD_SOURCE` → fuente usada (`vas`/`vac`)
+  - `VCD_EXTRA_KEY` → valor de `GLOBAL_KEY` aplicado al stdin (vacío si sin filtro)
+  - `VCD_STATE_DIR` → directorio de estado con los ficheros `KEY_clients.json`
 - **Retorno**: `0` = éxito, cualquier otro = warning en log, continúa
 
-### Ejemplo de hook
+> **Práctica recomendada para hooks nuevos**: ignorar stdin y leer
+> `$VCD_STATE_DIR/KEY_clients.json` directamente. Configurar `DISPATCH_STDIN=false`.
+
+### Ejemplo de hook (patrón clásico — stdin)
 
 ```sh
 #!/bin/bash
 # /etc/vcd/hooks.d/10-log.sh
-# Guarda el inventario en un fichero de log con timestamp.
-
 echo "=== $VCD_VERSION ($VCD_FILTER via $VCD_SOURCE) ===" >> /var/log/vcd-inventory.log
 jq '.clients | length' >> /var/log/vcd-inventory.log
 ```
 
+### Ejemplo de hook (patrón recomendado — fichero por clave)
+
 ```sh
-chmod +x /etc/vcd/hooks.d/10-log.sh
+#!/bin/bash
+# /etc/vcd/hooks.d/20-cups.sh
+# Requiere LOCAL_KEY_LIST="cups" y DISPATCH_STDIN=false en vcd.conf.
+# Configura CUPS en cada equipo que tenga la clave 'cups' en sus extras.
+cups_file="${VCD_STATE_DIR}/cups_clients.json"
+[[ -f "$cups_file" ]] || exit 0
+
+jq -r '.clients[] | "\(.ip) \(.extra_imperative.cups.server // "")"' "$cups_file" \
+| while read -r ip server; do
+    [[ -z "$server" ]] && continue
+    echo "Configurando $ip → cups://$server"
+    # lpadmin -H "$ip" ...
+done
+```
+
+```sh
+chmod +x /etc/vcd/hooks.d/20-cups.sh
 ```
 
 ### Reconstruir veyon-sync como hook

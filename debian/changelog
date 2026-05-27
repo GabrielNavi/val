@@ -1,3 +1,25 @@
+vx-dga-l-vcd (1.0-1~rc) unstable; urgency=medium
+
+  * Filtrado por clave extra (GLOBAL_KEY): VCD envía ?extra_key=KEY a VAS,
+    reduciendo el tráfico de red al inventario relevante para el consumidor.
+    Solo aplica con SOURCE=vas; se ignora con SOURCE=vac (con aviso).
+  * Materialización de vistas locales (LOCAL_KEY_LIST): tras cada descarga,
+    VCD escribe STATE_DIR/KEY_clients.json por cada clave configurada,
+    con los clientes que tienen esa clave en extra_imperative o extra_informative.
+    Operación local, sin peticiones adicionales a VAS.
+  * Activación/desactivación de stdin (DISPATCH_STDIN): por defecto true
+    (compatible con hooks existentes). false = hooks no reciben stdin y leen
+    sus datos desde VCD_STATE_DIR/KEY_clients.json. Práctica recomendada
+    para hooks nuevos.
+  * Nuevas variables de entorno para hooks:
+    - VCD_EXTRA_KEY: clave global aplicada al inventario recibido por stdin.
+    - VCD_STATE_DIR: ruta al directorio de estado con los ficheros materializados.
+  * Patrón de agrupación: VAC produce una key "dummy" (p.ej. aula3) en
+    extra_imperative; VCD filtra por esa key con GLOBAL_KEY=aula3 y
+    materializa sub-vistas adicionales con LOCAL_KEY_LIST.
+
+ -- Gabriel Navia <correos@gabrielnav.es>  Wed, 27 May 2026 12:00:00 +0200
+
 vx-dga-l-vcd (0.2-5) unstable; urgency=high
 
   * LA funcion log() redirigido a stderr (>&2) para evitar contaminación de stdout

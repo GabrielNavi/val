@@ -35,3 +35,23 @@ HOOKS_DIR=/etc/vcd/hooks.d
 
 # Directorio de estado de VAC (solo con SOURCE=vac)
 VAC_STATE_DIR=/var/lib/vac
+
+# Filtro global de clave extra enviado a VAS: solo descarga clientes que
+# tengan esta clave en extra_imperative o extra_informative.
+# Vacío = sin filtro (inventario completo). Solo aplica con SOURCE=vas.
+# Útil para agrupar equipos por rol/aula usando una key "dummy" en VAC.
+GLOBAL_KEY=
+
+# Lista de claves a materializar como ficheros locales tras cada descarga.
+# VCD escribe STATE_DIR/KEY_clients.json por cada clave, con los clientes
+# que tienen esa clave en extra_imperative o extra_informative.
+# Vacío = sin materialización. Las claves se separan por espacios.
+# Práctica recomendada: los hooks leen VCD_STATE_DIR/KEY_clients.json
+# en lugar de procesar el inventario completo por stdin.
+LOCAL_KEY_LIST=
+
+# Envío del inventario por stdin a los hooks.
+# true  = comportamiento actual (compatible con hooks existentes).
+# false = hooks no reciben stdin; deben leer VCD_STATE_DIR/KEY_clients.json.
+# Práctica recomendada para hooks nuevos: DISPATCH_STDIN=false.
+DISPATCH_STDIN=true

@@ -1,3 +1,30 @@
+vx-dga-l-vcd (0.9-3~rc) unstable; urgency=medium
+
+  * Paralelización: soporte para múltiples sub-instancias VCD concurrentes.
+  * Nuevo binario vcd-sub <name>: bucle VCD standalone para una sub-instancia.
+    Hereda defaults de /etc/vcd/vcd.conf y los sobreescribe con la config en
+    /etc/vcd/vcd.sub/<name>/vcd.conf. Estado independiente en
+    /var/lib/vcd/sub/<name>/. FIFO y puerto BUMP propios por instancia.
+  * Nuevo binario vcd-sub-manager: supervisor de procesos vcd-sub.
+    Escanea /etc/vcd/vcd.sub/*/, lanza vcd-sub por cada carpeta con vcd.conf.
+    Supervisa hijos cada 30s y los reinicia si mueren. Propaga SIGTERM.
+    Guarda contra doble arranque via /var/lib/vcd/vcd-sub-manager.pid
+    (evita conflicto entre PARALLELIZATION=true y vcd-sub.service activos
+    simultáneamente).
+  * Nuevo binario vcd-sub-instance: gestión del ciclo de vida de sub-instancias.
+    --create NAME [--vas URL | --source vac]: crea /etc/vcd/vcd.sub/<name>/
+    --delete NAME: elimina configuración y estado (aborta si vcd-sub activo)
+    --list: tabla NAME/SOURCE/HOST/ESTADO
+  * Nuevo servicio vcd-sub.service: arranca vcd-sub-manager de forma standalone,
+    sin necesidad de una instancia principal vcd.service activa.
+  * PARALLELIZATION=false (nueva variable en vcd.conf): true arranca
+    vcd-sub-manager en background al iniciar el daemon principal.
+  * LOG_TAG=[NAME-VCD] en sub-instancias; filtrable en journalctl:
+    journalctl -u vcd | grep '\[SAMBA-VCD\]'
+  * postinst: crea /etc/vcd/vcd.sub/ y /var/lib/vcd/sub/ en instalación.
+
+ -- Gabriel Navia <correos@gabrielnav.es>  Tue, 27 May 2026 20:00:00 +0200
+
 vx-dga-l-vcd (0.9-2~rc) unstable; urgency=medium
 
   * VCD-Aware: notificación push UDP para reducir latencia de reacción ante

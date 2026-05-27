@@ -67,3 +67,11 @@ DISPATCH_STDIN=true
 #   echo '{"url":"IP:PORT"}' | vac-register --imperative --key inform -
 # Ejemplo: BUMP_LISTEN_PORT=9876
 BUMP_LISTEN_PORT=0
+
+# Paralelización: lanza vcd-sub-manager al arrancar VCD.
+# Permite gestionar múltiples sub-instancias de VCD, cada una con su propio
+# SOURCE/VAS_HOST, hooks y estado, definidas en /etc/vcd/vcd.sub/*/vcd.conf.
+# true  → vcd arranca vcd-sub-manager en background al iniciar
+# false → sin sub-instancias (por defecto)
+# Gestión de sub-instancias: vcd-sub-instance --create NAME --vas URL
+PARALLELIZATION=false

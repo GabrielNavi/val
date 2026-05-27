@@ -1,0 +1,201 @@
+#!/bin/bash
+# vcd-sub-instance — Gestión de sub-instancias VCD.
+#
+# Uso:
+#   vcd-sub-instance --create NAME [--vas URL | --source vac]
+#   vcd-sub-instance --delete NAME
+#   vcd-sub-instance --list
+#
+# --create NAME
+#   Crea /etc/vcd/vcd.sub/<NAME>/ con vcd.conf, conf.d/ y hooks.d/.
+#   Parte de /usr/share/vcd/vcd.conf.defaults y ajusta SOURCE/VAS_HOST.
+#   --vas URL   → SOURCE=vas, VAS_HOST=URL  (por defecto)
+#   --source vac → SOURCE=vac, sin VAS_HOST
+#
+# --delete NAME
+#   Elimina la configuración (/etc/vcd/vcd.sub/<NAME>/) y el estado
+#   (/var/lib/vcd/sub/<NAME>/). Aborta si vcd-sub está en ejecución.
+#
+# --list
+#   Tabla con NAME, SOURCE/HOST y estado (activa/parada/nueva).
+
+set -euo pipefail
+
+DEFAULTS_FILE="/usr/share/vcd/vcd.conf.defaults"
+SUB_CONFIG_BASE="/etc/vcd/vcd.sub"
+SUB_STATE_BASE="/var/lib/vcd/sub"
+
+usage() {
+    cat >&2 <<'EOF'
+Uso:
+  vcd-sub-instance --create NAME [--vas URL | --source vac]
+  vcd-sub-instance --delete NAME
+  vcd-sub-instance --list
+EOF
+    exit 1
+}
+
+# ---------------------------------------------------------------------------
+# Parseo de argumentos
+# ---------------------------------------------------------------------------
+ACTION=""
+NAME=""
+VAS_URL=""
+SOURCE_VAL="vas"
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --create) ACTION="create"; NAME="${2:-}"; shift 2 ;;
+        --delete) ACTION="delete"; NAME="${2:-}"; shift 2 ;;
+        --list)   ACTION="list";                  shift   ;;
+        --vas)    VAS_URL="${2:-}"; SOURCE_VAL="vas"; shift 2 ;;
+        --source) SOURCE_VAL="${2:-}"; shift 2 ;;
+        *) echo "Opción desconocida: $1" >&2; usage ;;
+    esac
+done
+
+[[ -z "$ACTION" ]] && usage
+
+# ---------------------------------------------------------------------------
+# Validación de NAME
+# ---------------------------------------------------------------------------
+validate_name() {
+    local n="$1"
+    [[ -z "$n" ]] && { echo "Error: NAME no puede estar vacío." >&2; exit 1; }
+    [[ "$n" =~ ^[a-zA-Z0-9_-]+$ ]] || {
+        echo "Error: NAME solo puede contener letras, dígitos, guiones y subrayados." >&2
+        exit 1
+    }
+}
+
+# ---------------------------------------------------------------------------
+# Acción: --create
+# ---------------------------------------------------------------------------
+do_create() {
+    validate_name "$NAME"
+
+    local instance_dir="${SUB_CONFIG_BASE}/${NAME}"
+    if [[ -d "$instance_dir" ]]; then
+        echo "Error: la sub-instancia '${NAME}' ya existe en ${instance_dir}." >&2
+        exit 1
+    fi
+
+    if [[ "$SOURCE_VAL" == "vas" && -z "$VAS_URL" ]]; then
+        echo "Error: --vas URL es obligatorio con SOURCE=vas." >&2
+        exit 1
+    fi
+
+    if [[ ! -f "$DEFAULTS_FILE" ]]; then
+        echo "Error: no se encontró $DEFAULTS_FILE." >&2
+        exit 1
+    fi
+
+    mkdir -p "${instance_dir}/vcd.conf.d"
+    mkdir -p "${instance_dir}/hooks.d"
+
+    # Generar vcd.conf desde defaults, ajustando SOURCE y VAS_HOST
+    local conf_out="${instance_dir}/vcd.conf"
+    {
+        echo "# vcd.conf — sub-instancia '${NAME}'"
+        echo "# Generado por vcd-sub-instance el $(date -u '+%Y-%m-%d %H:%M UTC')"
+        echo "# Hereda los defaults de /etc/vcd/vcd.conf."
+        echo "# Solo es necesario definir aquí lo que difiere de la instancia principal."
+        echo ""
+        echo "SOURCE=${SOURCE_VAL}"
+        if [[ "$SOURCE_VAL" == "vas" ]]; then
+            echo "VAS_HOST=${VAS_URL}"
+        fi
+    } > "$conf_out"
+
+    echo "Sub-instancia '${NAME}' creada:"
+    echo "  Configuración: ${instance_dir}/vcd.conf"
+    echo "  Hooks:         ${instance_dir}/hooks.d/"
+    echo "  Overlays:      ${instance_dir}/vcd.conf.d/"
+    echo "  Estado (al arrancar): ${SUB_STATE_BASE}/${NAME}/"
+    echo ""
+    echo "Para activarla: systemctl restart vcd   (si PARALLELIZATION=true)"
+    echo "  o bien:       systemctl restart vcd-sub (standalone)"
+}
+
+# ---------------------------------------------------------------------------
+# Acción: --delete
+# ---------------------------------------------------------------------------
+do_delete() {
+    validate_name "$NAME"
+
+    local instance_dir="${SUB_CONFIG_BASE}/${NAME}"
+    local state_dir="${SUB_STATE_BASE}/${NAME}"
+
+    if [[ ! -d "$instance_dir" ]]; then
+        echo "Error: la sub-instancia '${NAME}' no existe en ${instance_dir}." >&2
+        exit 1
+    fi
+
+    # Comprobar si el proceso está activo
+    if pgrep -f "vcd-sub ${NAME}$" > /dev/null 2>&1; then
+        echo "Error: vcd-sub '${NAME}' está en ejecución. Detén el servicio antes de eliminar." >&2
+        exit 1
+    fi
+
+    rm -rf "$instance_dir"
+    echo "Configuración eliminada: ${instance_dir}"
+
+    if [[ -d "$state_dir" ]]; then
+        rm -rf "$state_dir"
+        echo "Estado eliminado:        ${state_dir}"
+    fi
+
+    echo "Sub-instancia '${NAME}' eliminada."
+}
+
+# ---------------------------------------------------------------------------
+# Acción: --list
+# ---------------------------------------------------------------------------
+do_list() {
+    if [[ ! -d "$SUB_CONFIG_BASE" ]]; then
+        echo "No existe el directorio de sub-instancias: $SUB_CONFIG_BASE"
+        exit 0
+    fi
+
+    local found=0
+    printf "%-20s %-10s %-35s %s\n" "NOMBRE" "SOURCE" "VAS_HOST / VAC_STATE_DIR" "ESTADO"
+    printf "%-20s %-10s %-35s %s\n" "------" "------" "------------------------" "------"
+
+    for instance_dir in "$SUB_CONFIG_BASE"/*/; do
+        [[ -d "$instance_dir" ]] || continue
+        local name
+        name="$(basename "$instance_dir")"
+        [[ -f "${instance_dir}/vcd.conf" ]] || continue
+
+        local src host status
+        src="$(grep -E '^SOURCE\s*=' "${instance_dir}/vcd.conf" \
+            | head -1 | cut -d= -f2- | tr -d '"' | xargs 2>/dev/null || echo 'vas')"
+        host="$(grep -E '^VAS_HOST\s*=' "${instance_dir}/vcd.conf" \
+            | head -1 | cut -d= -f2- | tr -d '"' | xargs 2>/dev/null || echo '')"
+        [[ "$src" == "vac" ]] && host="$(grep -E '^VAC_STATE_DIR\s*=' \
+            "${instance_dir}/vcd.conf" | head -1 | cut -d= -f2- | tr -d '"' \
+            | xargs 2>/dev/null || echo '/var/lib/vac')"
+
+        if pgrep -f "vcd-sub ${name}$" > /dev/null 2>&1; then
+            status="activa"
+        elif [[ -d "${SUB_STATE_BASE}/${name}" ]]; then
+            status="parada"
+        else
+            status="nueva"
+        fi
+
+        printf "%-20s %-10s %-35s %s\n" "$name" "$src" "${host:--}" "$status"
+        (( ++found ))
+    done
+
+    [[ $found -eq 0 ]] && echo "(ninguna sub-instancia configurada)"
+}
+
+# ---------------------------------------------------------------------------
+# Dispatch
+# ---------------------------------------------------------------------------
+case "$ACTION" in
+    create) do_create ;;
+    delete) do_delete ;;
+    list)   do_list   ;;
+esac

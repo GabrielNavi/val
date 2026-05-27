@@ -1,0 +1,13 @@
+[Unit]
+Description=Vitalinux Consumer Daemon — Sub-instance Manager
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/vcd-sub-manager
+Restart=on-failure
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target

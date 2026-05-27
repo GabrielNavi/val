@@ -33,13 +33,20 @@ No modifica ni requiere cambios en VAS ni en VAC.
 | Ruta | Descripción |
 |---|---|
 | `/usr/bin/vcd` | Daemon principal |
+| `/usr/bin/vcd-sub` | Daemon para sub-instancias (standalone) |
+| `/usr/bin/vcd-sub-manager` | Supervisor de sub-instancias |
+| `/usr/bin/vcd-sub-instance` | Gestión del ciclo de vida de sub-instancias |
 | `/usr/share/vcd/vcd.conf.defaults` | Referencia de valores por defecto (solo lectura) |
 | `/etc/vcd/vcd.conf` | Configuración principal |
 | `/etc/vcd/vcd.conf.d/` | Overlays de configuración (orden lexical) |
 | `/etc/vcd/hooks.d/` | Scripts hook ejecutables |
+| `/etc/vcd/vcd.sub/` | Directorio raíz de sub-instancias |
+| `/etc/vcd/vcd.sub/<name>/vcd.conf` | Configuración de sub-instancia |
+| `/etc/vcd/vcd.sub/<name>/hooks.d/` | Hooks propios de la sub-instancia |
 | `/var/lib/vcd/version` | Última versión procesada |
 | `/var/lib/vcd/clients.json` | Último inventario descargado |
 | `/var/lib/vcd/KEY_clients.json` | Vista por clave (una por entrada en `LOCAL_KEY_LIST`) |
+| `/var/lib/vcd/sub/<name>/` | Estado de la sub-instancia |
 
 ## Configuración
 
@@ -66,6 +73,7 @@ sudo systemctl restart vcd
 | `LOCAL_KEY_LIST` | _(vacío)_ | Claves separadas por espacios. VCD escribe `STATE_DIR/KEY_clients.json` por cada una tras cada descarga. |
 | `DISPATCH_STDIN` | `true` | `true`: hooks reciben el inventario por stdin (compat). `false`: stdin vacío; hooks leen `VCD_STATE_DIR/KEY_clients.json`. |
 | `BUMP_LISTEN_PORT` | `0` | Puerto UDP de escucha para notificaciones push de VAS. `0` = desactivado (solo polling). Con valor distinto de 0, cualquier datagrama UDP recibido interrumpe el `sleep` del ciclo e inicia una comprobación inmediata. |
+| `PARALLELIZATION` | `false` | `true`: arranca `vcd-sub-manager` en background al iniciar el daemon principal. Gestiona sub-instancias independientes. |
 
 ## Hooks
 
@@ -159,6 +167,69 @@ Requiere:
    ```
 
 Los sleeps de error (`RETRY_SECONDS`) no son interrumpibles; solo lo son los del ciclo normal (`CHECK_SECONDS`).
+
+## Paralelización (sub-instancias)
+
+VCD puede gestionar múltiples instancias paralelas, cada una con su propio `SOURCE`/`VAS_HOST`, hooks y estado. Útil para consumir simultáneamente inventarios de varios servidores VAS.
+
+### Crear y activar una sub-instancia
+
+```bash
+# Crear sub-instancia apuntando a un segundo VAS
+vcd-sub-instance --create samba --vas http://10.0.2.1:8000
+
+# Activar paralelización en vcd.conf
+echo 'PARALLELIZATION=true' >> /etc/vcd/vcd.conf
+systemctl restart vcd
+```
+
+### Estructura de directorios
+
+```
+/etc/vcd/vcd.sub/
+└── samba/
+    ├── vcd.conf          # Solo VAS_HOST; hereda /etc/vcd/vcd.conf
+    ├── vcd.conf.d/
+    └── hooks.d/
+
+/var/lib/vcd/sub/
+└── samba/
+    ├── version
+    ├── clients.json
+    └── KEY_clients.json
+```
+
+### Modos de activación
+
+| Modo | Comando |
+|---|---|
+| Junto a la instancia principal (`PARALLELIZATION=true`) | `systemctl restart vcd` |
+| Standalone (sin instancia principal) | `systemctl start vcd-sub` |
+
+### Gestión de sub-instancias
+
+```bash
+vcd-sub-instance --list                        # listar sub-instancias y estado
+vcd-sub-instance --create nombre --vas http://IP:PORT
+vcd-sub-instance --create nombre --source vac  # desde VAC local
+vcd-sub-instance --delete nombre               # elimina config y estado
+```
+
+### Logging
+
+| Proceso | Journal | Prefijo filtrable |
+|---|---|---|
+| `vcd` (instancia principal) | `vcd.service` | `[VCD]` |
+| `vcd-sub-manager` (hijo de vcd) | `vcd.service` | `[VCD] [PARALLEL]` |
+| `vcd-sub samba` | `vcd.service` | `[SAMBA-VCD]` |
+| `vcd-sub-manager` (standalone) | `vcd-sub.service` | `[VCD] [PARALLEL]` |
+| `vcd-sub samba` (standalone) | `vcd-sub.service` | `[SAMBA-VCD]` |
+
+```bash
+journalctl -u vcd     | grep '\[PARALLEL\]'
+journalctl -u vcd     | grep '\[SAMBA-VCD\]'
+journalctl -u vcd-sub | grep '\[SAMBA-VCD\]'
+```
 
 ## Notas
 

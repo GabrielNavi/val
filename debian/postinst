@@ -5,7 +5,9 @@ echo "[vcd] Ejecutando postinst..."
 
 mkdir -p /etc/vcd/vcd.conf.d
 mkdir -p /etc/vcd/hooks.d
+mkdir -p /etc/vcd/vcd.sub
 mkdir -p /var/lib/vcd
+mkdir -p /var/lib/vcd/sub
 
 if [ ! -f /var/lib/vcd/version ]; then
     echo "0" > /var/lib/vcd/version

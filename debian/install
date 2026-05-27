@@ -1,4 +1,8 @@
 usr/bin/vcd usr/bin/
+usr/bin/vcd-sub usr/bin/
+usr/bin/vcd-sub-manager usr/bin/
+usr/bin/vcd-sub-instance usr/bin/
 etc/vcd/vcd.conf etc/vcd/
 lib/systemd/system/vcd.service lib/systemd/system/
+lib/systemd/system/vcd-sub.service lib/systemd/system/
 usr/share/vcd/vcd.conf.defaults usr/share/vcd/

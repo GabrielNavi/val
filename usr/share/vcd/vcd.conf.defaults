@@ -55,3 +55,15 @@ LOCAL_KEY_LIST=
 # false = hooks no reciben stdin; deben leer VCD_STATE_DIR/KEY_clients.json.
 # Práctica recomendada para hooks nuevos: DISPATCH_STDIN=false.
 DISPATCH_STDIN=true
+
+# Puerto UDP de escucha para notificación push desde VAS (modo VCD-Aware).
+# 0 = desactivado (solo polling periódico, comportamiento por defecto).
+# Con valor distinto de 0, VCD escucha datagramas UDP en ese puerto.
+# Cualquier datagrama recibido interrumpe el sleep del ciclo normal (CHECK_SECONDS)
+# y dispara una consulta inmediata a /version. Los sleeps de error (RETRY_SECONDS)
+# no son interrumpibles.
+# Requiere el hook vcd-local activo en /etc/vas/hooks.d/ del servidor VAS,
+# y que el equipo cliente publique en VAC:
+#   echo '{"url":"IP:PORT"}' | vac-register --imperative --key inform -
+# Ejemplo: BUMP_LISTEN_PORT=9876
+BUMP_LISTEN_PORT=0

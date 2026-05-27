@@ -6,7 +6,7 @@ No modifica ni requiere cambios en VAS ni en VAC.
 
 ## ¿Qué hace?
 
-1. Compara periódicamente la versión remota del inventario con la última conocida.
+1. Compara la versión remota del inventario con la última conocida (polling o push).
 2. Si detecta un cambio, descarga el inventario (opcionalmente filtrado por `GLOBAL_KEY`).
 3. Materializa vistas locales por clave (`LOCAL_KEY_LIST`) en `STATE_DIR/KEY_clients.json`.
 4. Ejecuta en orden lexical todos los scripts ejecutables de `hooks.d/`.
@@ -65,6 +65,7 @@ sudo systemctl restart vcd
 | `GLOBAL_KEY` | _(vacío)_ | Clave enviada a VAS como `?extra_key=KEY`; reduce tráfico descargando solo clientes que tengan esa clave. Solo `SOURCE=vas`. |
 | `LOCAL_KEY_LIST` | _(vacío)_ | Claves separadas por espacios. VCD escribe `STATE_DIR/KEY_clients.json` por cada una tras cada descarga. |
 | `DISPATCH_STDIN` | `true` | `true`: hooks reciben el inventario por stdin (compat). `false`: stdin vacío; hooks leen `VCD_STATE_DIR/KEY_clients.json`. |
+| `BUMP_LISTEN_PORT` | `0` | Puerto UDP de escucha para notificaciones push de VAS. `0` = desactivado (solo polling). Con valor distinto de 0, cualquier datagrama UDP recibido interrumpe el `sleep` del ciclo e inicia una comprobación inmediata. |
 
 ## Hooks
 
@@ -140,6 +141,24 @@ sudo systemctl restart vcd
 journalctl -u vcd -f
 journalctl -u vcd -f | grep "\[VCD-ERROR\]"
 ```
+
+## Modo VCD-Aware (notificación push)
+
+Con `BUMP_LISTEN_PORT` distinto de 0, VCD abre un socket UDP y escucha notificaciones push de VAS. Cuando VAS ejecuta `bump_version`, el hook `vcd-local` envía un datagrama UDP; VCD interrumpe su `sleep` y consulta `/version` inmediatamente, reduciendo la latencia de reacción a milisegundos.
+
+```ini
+# /etc/vcd/vcd.conf
+BUMP_LISTEN_PORT=9876
+```
+
+Requiere:
+1. El hook `vcd-local` activo en VAS (`/etc/vas/hooks.d/vcd-local`).
+2. Que el equipo cliente haya publicado `inform.url` en VAC:
+   ```bash
+   echo '{"url":"IP_VCD:9876"}' | vac-register --imperative --key inform -
+   ```
+
+Los sleeps de error (`RETRY_SECONDS`) no son interrumpibles; solo lo son los del ciclo normal (`CHECK_SECONDS`).
 
 ## Notas
 

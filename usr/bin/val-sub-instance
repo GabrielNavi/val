@@ -1,36 +1,36 @@
 #!/bin/bash
-# vcd-sub-instance — Gestión de sub-instancias VCD.
+# val-sub-instance — Gestión de sub-instancias VAL.
 #
 # Uso:
-#   vcd-sub-instance --create NAME [--vas URL | --source vac]
-#   vcd-sub-instance --delete NAME
-#   vcd-sub-instance --list
+#   val-sub-instance --create NAME [--vas URL | --source vac]
+#   val-sub-instance --delete NAME
+#   val-sub-instance --list
 #
 # --create NAME
-#   Crea /etc/vcd/vcd.sub/<NAME>/ con vcd.conf, conf.d/ y hooks.d/.
-#   Parte de /usr/share/vcd/vcd.conf.defaults y ajusta SOURCE/VAS_HOST.
+#   Crea /etc/val/val.sub/<NAME>/ con val.conf, conf.d/ y hooks.d/.
+#   Parte de /usr/share/val/val.conf.defaults y ajusta SOURCE/VAS_HOST.
 #   --vas URL   → SOURCE=vas, VAS_HOST=URL  (por defecto)
 #   --source vac → SOURCE=vac, sin VAS_HOST
 #
 # --delete NAME
-#   Elimina la configuración (/etc/vcd/vcd.sub/<NAME>/) y el estado
-#   (/var/lib/vcd/sub/<NAME>/). Aborta si vcd-sub está en ejecución.
+#   Elimina la configuración (/etc/val/val.sub/<NAME>/) y el estado
+#   (/var/lib/val/sub/<NAME>/). Aborta si val-sub está en ejecución.
 #
 # --list
 #   Tabla con NAME, SOURCE/HOST y estado (activa/parada/nueva).
 
 set -euo pipefail
 
-DEFAULTS_FILE="/usr/share/vcd/vcd.conf.defaults"
-SUB_CONFIG_BASE="/etc/vcd/vcd.sub"
-SUB_STATE_BASE="/var/lib/vcd/sub"
+DEFAULTS_FILE="/usr/share/val/val.conf.defaults"
+SUB_CONFIG_BASE="/etc/val/val.sub"
+SUB_STATE_BASE="/var/lib/val/sub"
 
 usage() {
     cat >&2 <<'EOF'
 Uso:
-  vcd-sub-instance --create NAME [--vas URL | --source vac]
-  vcd-sub-instance --delete NAME
-  vcd-sub-instance --list
+  val-sub-instance --create NAME [--vas URL | --source vac]
+  val-sub-instance --delete NAME
+  val-sub-instance --list
 EOF
     exit 1
 }
@@ -90,15 +90,15 @@ do_create() {
         exit 1
     fi
 
-    mkdir -p "${instance_dir}/vcd.conf.d"
+    mkdir -p "${instance_dir}/val.conf.d"
     mkdir -p "${instance_dir}/hooks.d"
 
-    # Generar vcd.conf desde defaults, ajustando SOURCE y VAS_HOST
-    local conf_out="${instance_dir}/vcd.conf"
+    # Generar val.conf desde defaults, ajustando SOURCE y VAS_HOST
+    local conf_out="${instance_dir}/val.conf"
     {
-        echo "# vcd.conf — sub-instancia '${NAME}'"
-        echo "# Generado por vcd-sub-instance el $(date -u '+%Y-%m-%d %H:%M UTC')"
-        echo "# Hereda los defaults de /etc/vcd/vcd.conf."
+        echo "# val.conf — sub-instancia '${NAME}'"
+        echo "# Generado por val-sub-instance el $(date -u '+%Y-%m-%d %H:%M UTC')"
+        echo "# Hereda los defaults de /etc/val/val.conf."
         echo "# Solo es necesario definir aquí lo que difiere de la instancia principal."
         echo ""
         echo "SOURCE=${SOURCE_VAL}"
@@ -108,13 +108,13 @@ do_create() {
     } > "$conf_out"
 
     echo "Sub-instancia '${NAME}' creada:"
-    echo "  Configuración: ${instance_dir}/vcd.conf"
+    echo "  Configuración: ${instance_dir}/val.conf"
     echo "  Hooks:         ${instance_dir}/hooks.d/"
-    echo "  Overlays:      ${instance_dir}/vcd.conf.d/"
+    echo "  Overlays:      ${instance_dir}/val.conf.d/"
     echo "  Estado (al arrancar): ${SUB_STATE_BASE}/${NAME}/"
     echo ""
-    echo "Para activarla: systemctl restart vcd   (si PARALLELIZATION=true)"
-    echo "  o bien:       systemctl restart vcd-sub (standalone)"
+    echo "Para activarla: systemctl restart val   (si PARALLELIZATION=true)"
+    echo "  o bien:       systemctl restart val-sub (standalone)"
 }
 
 # ---------------------------------------------------------------------------
@@ -132,8 +132,8 @@ do_delete() {
     fi
 
     # Comprobar si el proceso está activo
-    if pgrep -f "vcd-sub ${NAME}$" > /dev/null 2>&1; then
-        echo "Error: vcd-sub '${NAME}' está en ejecución. Detén el servicio antes de eliminar." >&2
+    if pgrep -f "val-sub ${NAME}$" > /dev/null 2>&1; then
+        echo "Error: val-sub '${NAME}' está en ejecución. Detén el servicio antes de eliminar." >&2
         exit 1
     fi
 
@@ -165,18 +165,18 @@ do_list() {
         [[ -d "$instance_dir" ]] || continue
         local name
         name="$(basename "$instance_dir")"
-        [[ -f "${instance_dir}/vcd.conf" ]] || continue
+        [[ -f "${instance_dir}/val.conf" ]] || continue
 
         local src host status
-        src="$(grep -E '^SOURCE\s*=' "${instance_dir}/vcd.conf" \
+        src="$(grep -E '^SOURCE\s*=' "${instance_dir}/val.conf" \
             | head -1 | cut -d= -f2- | tr -d '"' | xargs 2>/dev/null || echo 'vas')"
-        host="$(grep -E '^VAS_HOST\s*=' "${instance_dir}/vcd.conf" \
+        host="$(grep -E '^VAS_HOST\s*=' "${instance_dir}/val.conf" \
             | head -1 | cut -d= -f2- | tr -d '"' | xargs 2>/dev/null || echo '')"
         [[ "$src" == "vac" ]] && host="$(grep -E '^VAC_STATE_DIR\s*=' \
-            "${instance_dir}/vcd.conf" | head -1 | cut -d= -f2- | tr -d '"' \
+            "${instance_dir}/val.conf" | head -1 | cut -d= -f2- | tr -d '"' \
             | xargs 2>/dev/null || echo '/var/lib/vac')"
 
-        if pgrep -f "vcd-sub ${name}$" > /dev/null 2>&1; then
+        if pgrep -f "val-sub ${name}$" > /dev/null 2>&1; then
             status="activa"
         elif [[ -d "${SUB_STATE_BASE}/${name}" ]]; then
             status="parada"

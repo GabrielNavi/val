@@ -1,14 +1,14 @@
 [Unit]
-Description=Vitalinux Consumer Daemon — Sub-instance Manager
+Description=Versatile Autoregistration Listener
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/vcd-sub-manager
+ExecStart=/usr/bin/val
 Restart=always
 RestartSec=30
-RuntimeDirectory=vcd
+RuntimeDirectory=val
 
 [Install]
 WantedBy=multi-user.target

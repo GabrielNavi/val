@@ -1,5 +1,5 @@
 #!/bin/bash
-# vcd — Vitalinux Consumer Daemon
+# val — Versatile Autoregistration Listener
 #
 # Daemon que observa cambios de versión en el inventario de VAS o VAC y
 # distribuye el inventario filtrado a los hooks configurados en hooks.d/.
@@ -16,25 +16,25 @@
 #
 # Hooks: scripts ejecutables en HOOKS_DIR.
 #   Reciben el JSON del inventario por stdin.
-#   Variables de entorno disponibles: VCD_VERSION, VCD_FILTER, VCD_SOURCE.
+#   Variables de entorno disponibles: VAL_VERSION, VAL_FILTER, VAL_SOURCE.
 #   Retorno != 0 → warning en log, continúa con el siguiente hook.
 #
-# Journalctl: journalctl -u vcd -f
-#   Filtrar errores: journalctl -u vcd -f | grep "\[VCD-ERROR\]"
+# Journalctl: journalctl -u val -f
+#   Filtrar errores: journalctl -u val -f | grep "\[VAL-ERROR\]"
 
 set -euo pipefail
 
 # ---------------------------------------------------------------------------
 # Rutas y valores por defecto
 # ---------------------------------------------------------------------------
-CONF_FILE="/etc/vcd/vcd.conf"
-CONF_DIR="/etc/vcd/vcd.conf.d"
-STATE_DIR="/var/lib/vcd"
+CONF_FILE="/etc/val/val.conf"
+CONF_DIR="/etc/val/val.conf.d"
+STATE_DIR="/var/lib/val"
 VERSION_FILE="${STATE_DIR}/version"
 CLIENTS_FILE="${STATE_DIR}/clients.json"
 TMP_CLIENTS="${STATE_DIR}/clients.json.tmp"
 
-LOG_TAG="${LOG_TAG:-[VCD]}"
+LOG_TAG="${LOG_TAG:-[VAL]}"
 
 SOURCE="vas"
 VAS_HOST=""
@@ -42,7 +42,7 @@ VAC_STATE_DIR="/var/lib/vac"
 FILTER="active"
 CHECK_SECONDS=300
 RETRY_SECONDS=60
-HOOKS_DIR="/etc/vcd/hooks.d"
+HOOKS_DIR="/etc/val/hooks.d"
 GLOBAL_KEY=""
 LOCAL_KEY_LIST=""
 DISPATCH_STDIN="true"
@@ -114,7 +114,7 @@ fi
 # ---------------------------------------------------------------------------
 # Validación de configuración
 # ---------------------------------------------------------------------------
-log "=== Iniciando vcd ==="
+log "=== Iniciando val ==="
 log "SOURCE:         $SOURCE"
 log "FILTER:         $FILTER"
 log "CHECK:          ${CHECK_SECONDS}s"
@@ -129,11 +129,11 @@ log "BUMP_LISTEN_PORT: ${BUMP_LISTEN_PORT} ($([ "$BUMP_LISTEN_PORT" != "0" ] && 
 [[ "$SOURCE" == "vac" ]] && log "VAC_STATE_DIR:  $VAC_STATE_DIR"
 
 if [[ "$PARALLELIZATION" == "true" ]]; then
-    if command -v vcd-sub-manager >/dev/null 2>&1; then
-        vcd-sub-manager &
-        log "[PARALLEL] vcd-sub-manager lanzado (PID $!)"
+    if command -v val-sub-manager >/dev/null 2>&1; then
+        val-sub-manager &
+        log "[PARALLEL] val-sub-manager lanzado (PID $!)"
     else
-        log "[ERROR] PARALLELIZATION=true pero vcd-sub-manager no encontrado. Continuando sin sub-instancias."
+        log "[ERROR] PARALLELIZATION=true pero val-sub-manager no encontrado. Continuando sin sub-instancias."
     fi
 fi
 
@@ -156,10 +156,10 @@ if [[ "$SOURCE" == "vac" && -n "$GLOBAL_KEY" ]]; then
 fi
 
 # ---------------------------------------------------------------------------
-# Bump listener (VCD-Aware): notificación push desde VAS via UDP
+# Bump listener (VAL-Aware): notificación push desde VAS via UDP
 # ---------------------------------------------------------------------------
 BUMP_PID=""
-BUMP_FIFO="/var/run/vcd/bump.fifo"
+BUMP_FIFO="/var/run/val/bump.fifo"
 
 interruptible_sleep() {
     if [[ "$BUMP_LISTEN_PORT" != "0" ]]; then
@@ -238,7 +238,7 @@ fetch_clients() {
                 log "[FETCH] Inventario guardado: $CLIENTS_FILE ($count equipo(s), filter=$FILTER)"
                 return 0
             else
-                log "[VCD-ERROR] Error descargando inventario desde VAS. CLIENTS_FILE no modificado."
+                log "[VAL-ERROR] Error descargando inventario desde VAS. CLIENTS_FILE no modificado."
                 rm -f "$TMP_CLIENTS"
                 return 1
             fi
@@ -252,7 +252,7 @@ fetch_clients() {
                 log "[FETCH] Inventario copiado desde VAC: $CLIENTS_FILE ($count equipo(s))"
                 return 0
             else
-                log "[VCD-ERROR] No se encontró ${vac_clients}. ¿Está VAC instalado y activo?"
+                log "[VAL-ERROR] No se encontró ${vac_clients}. ¿Está VAC instalado y activo?"
                 return 1
             fi
             ;;
@@ -281,7 +281,7 @@ materialize_keys() {
             count="$(jq '.clients | length' "$out" 2>/dev/null || echo '?')"
             log "[MATERIALIZE] ${key}_clients.json → $count equipo(s)"
         else
-            log "[VCD-ERROR] Error materializando ${key}_clients.json"
+            log "[VAL-ERROR] Error materializando ${key}_clients.json"
             rm -f "$tmp"
         fi
     done
@@ -289,9 +289,9 @@ materialize_keys() {
 
 # Ejecuta en orden lexical todos los scripts ejecutables de HOOKS_DIR.
 # Cada hook recibe el inventario JSON por stdin y las variables de entorno:
-#   VCD_VERSION → versión que disparó la ejecución
-#   VCD_FILTER  → filtro activo (active/inactive/all)
-#   VCD_SOURCE  → fuente usada (vas/vac)
+#   VAL_VERSION → versión que disparó la ejecución
+#   VAL_FILTER  → filtro activo (active/inactive/all)
+#   VAL_SOURCE  → fuente usada (vas/vac)
 # Un hook que devuelve error no interrumpe la cadena.
 dispatch_hooks() {
     local version="$1"
@@ -312,15 +312,15 @@ dispatch_hooks() {
         [[ -f "$hook" && -x "$hook" ]] || continue
         (( ++hook_count ))
         log "[HOOKS] Ejecutando: $(basename "$hook")"
-        if VCD_VERSION="$version" \
-           VCD_FILTER="$FILTER" \
-           VCD_SOURCE="$SOURCE" \
-           VCD_EXTRA_KEY="$GLOBAL_KEY" \
-           VCD_STATE_DIR="$STATE_DIR" \
+        if VAL_VERSION="$version" \
+           VAL_FILTER="$FILTER" \
+           VAL_SOURCE="$SOURCE" \
+           VAL_EXTRA_KEY="$GLOBAL_KEY" \
+           VAL_STATE_DIR="$STATE_DIR" \
            "$hook" < "$stdin_src"; then
             log "[HOOKS] OK: $(basename "$hook")"
         else
-            log "[VCD-ERROR] Hook $(basename "$hook") terminó con error. Continuando."
+            log "[VAL-ERROR] Hook $(basename "$hook") terminó con error. Continuando."
             (( ++hook_errors ))
         fi
     done
@@ -376,7 +376,7 @@ while true; do
 
     # --- Paso 2: Obtener inventario ------------------------------------------
     if ! fetch_clients; then
-        log "[VCD-ERROR] No se pudo obtener el inventario. Reintentando en ${RETRY_SECONDS}s."
+        log "[VAL-ERROR] No se pudo obtener el inventario. Reintentando en ${RETRY_SECONDS}s."
         sleep "$RETRY_SECONDS"
         continue
     fi

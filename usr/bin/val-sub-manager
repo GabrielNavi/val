@@ -1,26 +1,26 @@
 #!/bin/bash
-# vcd-sub-manager — Supervisor de sub-instancias VCD.
+# val-sub-manager — Supervisor de sub-instancias VAL.
 #
-# Lanzado por vcd (PARALLELIZATION=true) o por vcd-sub.service (standalone).
-# Escanea /etc/vcd/vcd.sub/*/ y arranca un proceso vcd-sub <name> por cada
-# carpeta que contenga vcd.conf. Supervisa los hijos cada 30s y los reinicia
+# Lanzado por val (PARALLELIZATION=true) o por val-sub.service (standalone).
+# Escanea /etc/val/val.sub/*/ y arranca un proceso val-sub <name> por cada
+# carpeta que contenga val.conf. Supervisa los hijos cada 30s y los reinicia
 # si mueren. Al recibir SIGTERM/SIGINT propaga la señal a todos los hijos.
 #
-# Guarda de doble arranque: si ya existe un vcd-sub-manager vivo (pidfile en
-# /var/lib/vcd/vcd-sub-manager.pid), sale inmediatamente.
+# Guarda de doble arranque: si ya existe un val-sub-manager vivo (pidfile en
+# /var/lib/val/val-sub-manager.pid), sale inmediatamente.
 #
 # Journalctl:
-#   journalctl -u vcd     | grep '\[PARALLEL\]'   # cuando lo lanza vcd
-#   journalctl -u vcd-sub | grep '\[PARALLEL\]'   # cuando corre standalone
+#   journalctl -u val     | grep '\[PARALLEL\]'   # cuando lo lanza val
+#   journalctl -u val-sub | grep '\[PARALLEL\]'   # cuando corre standalone
 
 set -euo pipefail
 
-LOG_TAG="${LOG_TAG:-[VCD]}"
+LOG_TAG="${LOG_TAG:-[VAL]}"
 
 # Leer LOG_LEVEL del fichero de configuración principal para respetar LOG_LEVEL=no.
 LOG_LEVEL="normal"
-if [[ -f /etc/vcd/vcd.conf ]]; then
-    _ll="$(grep -m1 '^LOG_LEVEL[[:space:]]*=' /etc/vcd/vcd.conf \
+if [[ -f /etc/val/val.conf ]]; then
+    _ll="$(grep -m1 '^LOG_LEVEL[[:space:]]*=' /etc/val/val.conf \
         | cut -d= -f2- | tr -d '"' | xargs 2>/dev/null || true)"
     [[ -n "$_ll" ]] && LOG_LEVEL="$_ll"
 fi
@@ -33,14 +33,14 @@ log() {
 # ---------------------------------------------------------------------------
 # Guarda contra doble arranque
 # ---------------------------------------------------------------------------
-PIDFILE="/var/lib/vcd/vcd-sub-manager.pid"
+PIDFILE="/var/lib/val/val-sub-manager.pid"
 
 mkdir -p "$(dirname "$PIDFILE")"
 
 if [[ -f "$PIDFILE" ]]; then
     old_pid="$(cat "$PIDFILE" 2>/dev/null || true)"
     if [[ -n "$old_pid" ]] && kill -0 "$old_pid" 2>/dev/null; then
-        log "[PARALLEL] vcd-sub-manager ya está en ejecución (PID $old_pid). Saliendo."
+        log "[PARALLEL] val-sub-manager ya está en ejecución (PID $old_pid). Saliendo."
         exit 0
     fi
 fi
@@ -57,19 +57,19 @@ cleanup() {
     for name in "${!CHILD_PIDS[@]}"; do
         local pid="${CHILD_PIDS[$name]}"
         kill "$pid" 2>/dev/null || true
-        log "[PARALLEL] Señal SIGTERM enviada a ${name}-vcd (PID $pid)"
+        log "[PARALLEL] Señal SIGTERM enviada a ${name}-val (PID $pid)"
     done
     wait
     rm -f "$PIDFILE"
-    log "[PARALLEL] vcd-sub-manager detenido."
+    log "[PARALLEL] val-sub-manager detenido."
     exit 0
 }
 trap cleanup SIGTERM SIGINT
 
 # ---------------------------------------------------------------------------
-# Arranque: lanzar una sub-instancia por carpeta con vcd.conf
+# Arranque: lanzar una sub-instancia por carpeta con val.conf
 # ---------------------------------------------------------------------------
-SUB_DIR="/etc/vcd/vcd.sub"
+SUB_DIR="/etc/val/val.sub"
 
 if [[ ! -d "$SUB_DIR" ]]; then
     log "[PARALLEL] Directorio de sub-instancias no encontrado: $SUB_DIR"
@@ -81,17 +81,17 @@ launched=0
 for instance_dir in "$SUB_DIR"/*/; do
     [[ -d "$instance_dir" ]] || continue
     name="$(basename "$instance_dir")"
-    [[ -f "${instance_dir}/vcd.conf" ]] || continue
+    [[ -f "${instance_dir}/val.conf" ]] || continue
 
-    source_val="$(grep -E '^SOURCE\s*=' "${instance_dir}/vcd.conf" \
+    source_val="$(grep -E '^SOURCE\s*=' "${instance_dir}/val.conf" \
         | head -1 | cut -d= -f2- | tr -d '"' | xargs 2>/dev/null || echo 'vas')"
-    vas_host="$(grep -E '^VAS_HOST\s*=' "${instance_dir}/vcd.conf" \
+    vas_host="$(grep -E '^VAS_HOST\s*=' "${instance_dir}/val.conf" \
         | head -1 | cut -d= -f2- | tr -d '"' | xargs 2>/dev/null || echo '?')"
     info="${source_val}${vas_host:+→${vas_host}}"
 
-    vcd-sub "$name" &
+    val-sub "$name" &
     CHILD_PIDS[$name]=$!
-    log "[PARALLEL] Lanzado ${name}-vcd (${info}) (PID ${CHILD_PIDS[$name]})"
+    log "[PARALLEL] Lanzado ${name}-val (${info}) (PID ${CHILD_PIDS[$name]})"
     (( ++launched ))
 done
 
@@ -111,10 +111,10 @@ while true; do
     for name in "${!CHILD_PIDS[@]}"; do
         pid="${CHILD_PIDS[$name]}"
         if ! kill -0 "$pid" 2>/dev/null; then
-            log "[PARALLEL] ${name}-vcd (PID $pid) ha terminado inesperadamente. Reiniciando..."
-            vcd-sub "$name" &
+            log "[PARALLEL] ${name}-val (PID $pid) ha terminado inesperadamente. Reiniciando..."
+            val-sub "$name" &
             CHILD_PIDS[$name]=$!
-            log "[PARALLEL] ${name}-vcd relanzado (PID ${CHILD_PIDS[$name]})"
+            log "[PARALLEL] ${name}-val relanzado (PID ${CHILD_PIDS[$name]})"
         fi
     done
 done

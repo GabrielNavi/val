@@ -1,11 +1,11 @@
 #!/bin/sh
 set -e
 
-echo "[vcd] Ejecutando prerm..."
+echo "[val] Ejecutando prerm..."
 
 if [ "$1" = "remove" ]; then
-    systemctl stop vcd.service || true
-    systemctl disable vcd.service || true
+    systemctl stop val.service || true
+    systemctl disable val.service || true
 fi
 
 exit 0

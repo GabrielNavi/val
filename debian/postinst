@@ -1,27 +1,27 @@
 #!/bin/sh
 set -e
 
-echo "[vcd] Ejecutando postinst..."
+echo "[val] Ejecutando postinst..."
 
-mkdir -p /etc/vcd/vcd.conf.d
-mkdir -p /etc/vcd/hooks.d
-mkdir -p /etc/vcd/vcd.sub
-mkdir -p /var/lib/vcd
-mkdir -p /var/lib/vcd/sub
+mkdir -p /etc/val/val.conf.d
+mkdir -p /etc/val/hooks.d
+mkdir -p /etc/val/val.sub
+mkdir -p /var/lib/val
+mkdir -p /var/lib/val/sub
 
-if [ ! -f /var/lib/vcd/version ]; then
-    echo "0" > /var/lib/vcd/version
+if [ ! -f /var/lib/val/version ]; then
+    echo "0" > /var/lib/val/version
 fi
 
 systemctl daemon-reload || true
-systemctl enable vcd.service || true
+systemctl enable val.service || true
 
 if [ "$1" = "configure" ]; then
     if [ -n "${2:-}" ]; then
-        systemctl restart vcd.service || true
+        systemctl restart val.service || true
     else
-        systemctl start vcd.service || true
+        systemctl start val.service || true
     fi
 fi
 
-echo "[vcd] Instalacion completada."
+echo "[val] Instalacion completada."

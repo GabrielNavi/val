@@ -1,95 +1,95 @@
-vx-dga-l-vcd (0.9-5~rc) unstable; urgency=low
+vx-dga-l-val (0.9-5~rc) unstable; urgency=low
 
-  * vcd: corregido orden de definición — log() se define ahora antes de
+  * val: corregido orden de definición — log() se define ahora antes de
     load_conf(), eliminando los echo directos que bypasaban LOG_LEVEL=no
     durante la carga de configuración e inicialización del fichero de versión.
-  * vcd: log() usa stdout en vez de stderr, alineado con VAC y VAF.
-  * vcd-sub: log() usa stdout en vez de stderr.
-  * vcd-sub-manager: añadido soporte a LOG_LEVEL — lee LOG_LEVEL de
-    /etc/vcd/vcd.conf al arrancar; con LOG_LEVEL=no suprime todos los mensajes
+  * val: log() usa stdout en vez de stderr, alineado con VAC y VAF.
+  * val-sub: log() usa stdout en vez de stderr.
+  * val-sub-manager: añadido soporte a LOG_LEVEL — lee LOG_LEVEL de
+    /etc/val/val.conf al arrancar; con LOG_LEVEL=no suprime todos los mensajes
     (antes siempre imprimía). log() usa stdout en vez de stderr.
 
  -- Gabriel Navia <correos@gabrielnav.es>  Wed, 28 May 2026 12:00:00 +0200
 
-vx-dga-l-vcd (0.9-4~rc) unstable; urgency=low
+vx-dga-l-val (0.9-4~rc) unstable; urgency=low
 
-  * vcd, vcd-sub: FILTER acepta ahora 'archived' además de active/inactive/all.
+  * val, val-sub: FILTER acepta ahora 'archived' además de active/inactive/all.
     Alineado con los estados reales de VAS (active/inactive/archived/all).
-  * vcd.service, vcd-sub.service: añadido RuntimeDirectory=vcd para que systemd
-    gestione /run/vcd; vcd-sub.service cambia Restart=on-failure → Restart=always.
+  * val.service, val-sub.service: añadido RuntimeDirectory=val para que systemd
+    gestione /run/val; val-sub.service cambia Restart=on-failure → Restart=always.
   * debian/control: añadido Recommends: netcat-openbsd (necesario para BUMP_LISTEN_PORT).
-  * vcd.conf, vcd.conf.defaults: documentado el valor 'archived' en comentarios de FILTER.
+  * val.conf, val.conf.defaults: documentado el valor 'archived' en comentarios de FILTER.
 
  -- Gabriel Navia <correos@gabrielnav.es>  Wed, 27 May 2026 22:00:00 +0200
 
-vx-dga-l-vcd (0.9-3~rc) unstable; urgency=medium
+vx-dga-l-val (0.9-3~rc) unstable; urgency=medium
 
-  * Paralelización: soporte para múltiples sub-instancias VCD concurrentes.
-  * Nuevo binario vcd-sub <name>: bucle VCD standalone para una sub-instancia.
-    Hereda defaults de /etc/vcd/vcd.conf y los sobreescribe con la config en
-    /etc/vcd/vcd.sub/<name>/vcd.conf. Estado independiente en
-    /var/lib/vcd/sub/<name>/. FIFO y puerto BUMP propios por instancia.
-  * Nuevo binario vcd-sub-manager: supervisor de procesos vcd-sub.
-    Escanea /etc/vcd/vcd.sub/*/, lanza vcd-sub por cada carpeta con vcd.conf.
+  * Paralelización: soporte para múltiples sub-instancias VAL concurrentes.
+  * Nuevo binario val-sub <name>: bucle VAL standalone para una sub-instancia.
+    Hereda defaults de /etc/val/val.conf y los sobreescribe con la config en
+    /etc/val/val.sub/<name>/val.conf. Estado independiente en
+    /var/lib/val/sub/<name>/. FIFO y puerto BUMP propios por instancia.
+  * Nuevo binario val-sub-manager: supervisor de procesos val-sub.
+    Escanea /etc/val/val.sub/*/, lanza val-sub por cada carpeta con val.conf.
     Supervisa hijos cada 30s y los reinicia si mueren. Propaga SIGTERM.
-    Guarda contra doble arranque via /var/lib/vcd/vcd-sub-manager.pid
-    (evita conflicto entre PARALLELIZATION=true y vcd-sub.service activos
+    Guarda contra doble arranque via /var/lib/val/val-sub-manager.pid
+    (evita conflicto entre PARALLELIZATION=true y val-sub.service activos
     simultáneamente).
-  * Nuevo binario vcd-sub-instance: gestión del ciclo de vida de sub-instancias.
-    --create NAME [--vas URL | --source vac]: crea /etc/vcd/vcd.sub/<name>/
-    --delete NAME: elimina configuración y estado (aborta si vcd-sub activo)
+  * Nuevo binario val-sub-instance: gestión del ciclo de vida de sub-instancias.
+    --create NAME [--vas URL | --source vac]: crea /etc/val/val.sub/<name>/
+    --delete NAME: elimina configuración y estado (aborta si val-sub activo)
     --list: tabla NAME/SOURCE/HOST/ESTADO
-  * Nuevo servicio vcd-sub.service: arranca vcd-sub-manager de forma standalone,
-    sin necesidad de una instancia principal vcd.service activa.
-  * PARALLELIZATION=false (nueva variable en vcd.conf): true arranca
-    vcd-sub-manager en background al iniciar el daemon principal.
-  * LOG_TAG=[NAME-VCD] en sub-instancias; filtrable en journalctl:
-    journalctl -u vcd | grep '\[SAMBA-VCD\]'
-  * postinst: crea /etc/vcd/vcd.sub/ y /var/lib/vcd/sub/ en instalación.
+  * Nuevo servicio val-sub.service: arranca val-sub-manager de forma standalone,
+    sin necesidad de una instancia principal val.service activa.
+  * PARALLELIZATION=false (nueva variable en val.conf): true arranca
+    val-sub-manager en background al iniciar el daemon principal.
+  * LOG_TAG=[NAME-VAL] en sub-instancias; filtrable en journalctl:
+    journalctl -u val | grep '\[SAMBA-VAL\]'
+  * postinst: crea /etc/val/val.sub/ y /var/lib/val/sub/ en instalación.
 
  -- Gabriel Navia <correos@gabrielnav.es>  Tue, 27 May 2026 20:00:00 +0200
 
-vx-dga-l-vcd (0.9-2~rc) unstable; urgency=medium
+vx-dga-l-val (0.9-2~rc) unstable; urgency=medium
 
-  * VCD-Aware: notificación push UDP para reducir latencia de reacción ante
+  * VAL-Aware: notificación push UDP para reducir latencia de reacción ante
     cambios en el inventario de VAS.
-  * BUMP_LISTEN_PORT=0 (nueva variable en vcd.conf): con un valor distinto de 0,
-    VCD abre un FIFO y escucha datagramas UDP en ese puerto via nc. Cualquier
+  * BUMP_LISTEN_PORT=0 (nueva variable en val.conf): con un valor distinto de 0,
+    VAL abre un FIFO y escucha datagramas UDP en ese puerto via nc. Cualquier
     datagrama recibido interrumpe el sleep del ciclo y dispara una consulta
     inmediata a /version. 0 = desactivado (comportamiento anterior intacto).
-  * Implementación mínima: exec 3<>/var/run/vcd/bump.fifo (FIFO siempre con
+  * Implementación mínima: exec 3<>/var/run/val/bump.fifo (FIFO siempre con
     ambos extremos abiertos, evita bloqueo del escritor) + nc -u -l -k en
     background. Sleep normal sustituido por read -t CHECK_SECONDS <&3.
     Solo los sleeps de ciclo completado (CHECK_SECONDS) son interrumpibles;
     los sleeps de error (RETRY_SECONDS) no se ven afectados.
   * Cleanup en SIGTERM/SIGINT: mata nc, elimina FIFO.
-  * Compatible con vcd-local hook de VAS (ver vx-dga-l-vas >= 0.9-8~rc).
+  * Compatible con val-local hook de VAS (ver vx-dga-l-vas >= 0.9-8~rc).
 
  -- Gabriel Navia <correos@gabrielnav.es>  Tue, 27 May 2026 19:00:00 +0200
 
-vx-dga-l-vcd (0.9-1~rc) unstable; urgency=medium
+vx-dga-l-val (0.9-1~rc) unstable; urgency=medium
 
-  * Filtrado por clave extra (GLOBAL_KEY): VCD envía ?extra_key=KEY a VAS,
+  * Filtrado por clave extra (GLOBAL_KEY): VAL envía ?extra_key=KEY a VAS,
     reduciendo el tráfico de red al inventario relevante para el consumidor.
     Solo aplica con SOURCE=vas; se ignora con SOURCE=vac (con aviso).
   * Materialización de vistas locales (LOCAL_KEY_LIST): tras cada descarga,
-    VCD escribe STATE_DIR/KEY_clients.json por cada clave configurada,
+    VAL escribe STATE_DIR/KEY_clients.json por cada clave configurada,
     con los clientes que tienen esa clave en extra_imperative o extra_informative.
     Operación local, sin peticiones adicionales a VAS.
   * Activación/desactivación de stdin (DISPATCH_STDIN): por defecto true
     (compatible con hooks existentes). false = hooks no reciben stdin y leen
-    sus datos desde VCD_STATE_DIR/KEY_clients.json. Práctica recomendada
+    sus datos desde VAL_STATE_DIR/KEY_clients.json. Práctica recomendada
     para hooks nuevos.
   * Nuevas variables de entorno para hooks:
-    - VCD_EXTRA_KEY: clave global aplicada al inventario recibido por stdin.
-    - VCD_STATE_DIR: ruta al directorio de estado con los ficheros materializados.
+    - VAL_EXTRA_KEY: clave global aplicada al inventario recibido por stdin.
+    - VAL_STATE_DIR: ruta al directorio de estado con los ficheros materializados.
   * Patrón de agrupación: VAC produce una key "dummy" (p.ej. aula3) en
-    extra_imperative; VCD filtra por esa key con GLOBAL_KEY=aula3 y
+    extra_imperative; VAL filtra por esa key con GLOBAL_KEY=aula3 y
     materializa sub-vistas adicionales con LOCAL_KEY_LIST.
 
  -- Gabriel Navia <correos@gabrielnav.es>  Wed, 27 May 2026 12:00:00 +0200
 
-vx-dga-l-vcd (0.2-5) unstable; urgency=high
+vx-dga-l-val (0.2-5) unstable; urgency=high
 
   * LA funcion log() redirigido a stderr (>&2) para evitar contaminación de stdout
     en get_remote_version(), que se invoca con $() y captura todo stdout.
@@ -98,45 +98,45 @@ vx-dga-l-vcd (0.2-5) unstable; urgency=high
 
  -- Gabriel Navia <correos@gabrielnav.es>  Thu, 15 May 2026 15:00:00 +0200
 
-vx-dga-l-vcd (0.2-4) unstable; urgency=low
+vx-dga-l-val (0.2-4) unstable; urgency=low
 
   * postinst: corregido arranque del servicio; instalación nueva usa start
     en lugar de restart incondicionalmente (parity con VAC y VAS).
 
  -- Gabriel Navia <correos@gabrielnav.es>  Fri, 15 May 2026 12:00:00 +0200
 
-vx-dga-l-vcd (0.2-3) unstable; urgency=low
+vx-dga-l-val (0.2-3) unstable; urgency=low
 
-  * Añadido /usr/share/vcd/vcd.conf.defaults: copia de referencia de la
+  * Añadido /usr/share/val/val.conf.defaults: copia de referencia de la
     configuración por defecto, siempre actualizada en upgrade.
     Permite comparar con la configuración activa:
-    diff /etc/vcd/vcd.conf /usr/share/vcd/vcd.conf.defaults
+    diff /etc/val/val.conf /usr/share/val/val.conf.defaults
 
  -- Gabriel Navia <correos@gabrielnav.es>  Fri, 15 May 2026 12:00:00 +0200
 
-vx-dga-l-vcd (0.2-2) unstable; urgency=low
+vx-dga-l-val (0.2-2) unstable; urgency=low
 
   * Actualizado comentario de validación de versión a YYYYMMDDHHMMSSmmm.
     La regex ^[0-9]+$ ya era compatible; solo documentación.
 
  -- Gabriel Navia <correos@gabrielnav.es>  Thu, 14 May 2026 17:00:00 +0200
 
-vx-dga-l-vcd (0.2-1) unstable; urgency=medium
+vx-dga-l-val (0.2-1) unstable; urgency=medium
 
   * Diseño extrapolado de VAC y VVS
     Daemon generico que observa cambios de version en VAS o VAC y distribuye
     el inventario filtrado (active/inactive/all) a hooks via stdin.
-    Soporta overlays de configuracion en vcd.conf.d/.
+    Soporta overlays de configuracion en val.conf.d/.
 
  -- Gabriel Navia <correos@gabrielnav.es>  Thu, 14 May 2026 00:00:00 +0000
 
-vx-dga-l-vcd (0.1-2) unstable; urgency=medium
+vx-dga-l-val (0.1-2) unstable; urgency=medium
 
-  * Definicion de las funcionalidades de VCD y filtros de uso
+  * Definicion de las funcionalidades de VAL y filtros de uso
 
  -- Gabriel Navia <correos@gabrielnav.es>  Thu, 14 May 2026 00:00:00 +0000
 
-vx-dga-l-vcd (0.1-1) unstable; urgency=medium
+vx-dga-l-val (0.1-1) unstable; urgency=medium
 
   * Initial release.
 

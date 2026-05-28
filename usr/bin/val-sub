@@ -1,21 +1,21 @@
 #!/bin/bash
-# vcd-sub — Bucle VCD para una sub-instancia de paralelización.
+# val-sub — Bucle VAL para una sub-instancia de paralelización.
 #
-# Uso: vcd-sub <name>
+# Uso: val-sub <name>
 #
-#   <name> es el nombre de la carpeta en /etc/vcd/vcd.sub/<name>/.
-#   Esa carpeta debe contener al menos vcd.conf con SOURCE o VAS_HOST definido.
+#   <name> es el nombre de la carpeta en /etc/val/val.sub/<name>/.
+#   Esa carpeta debe contener al menos val.conf con SOURCE o VAS_HOST definido.
 #
-# Diferencias respecto a vcd:
-#   - Rutas derivadas del nombre: STATE_DIR=/var/lib/vcd/sub/<name>/
-#   - Hereda defaults de /etc/vcd/vcd.conf; los sobreescribe con la config de instancia.
-#   - HOOKS_DIR por defecto: /etc/vcd/vcd.sub/<name>/hooks.d/
-#   - LOG_TAG=[NAME-VCD] para identificar en journalctl.
-#   - No lanza vcd-sub-manager (las sub-instancias no se anidan).
+# Diferencias respecto a val:
+#   - Rutas derivadas del nombre: STATE_DIR=/var/lib/val/sub/<name>/
+#   - Hereda defaults de /etc/val/val.conf; los sobreescribe con la config de instancia.
+#   - HOOKS_DIR por defecto: /etc/val/val.sub/<name>/hooks.d/
+#   - LOG_TAG=[NAME-VAL] para identificar en journalctl.
+#   - No lanza val-sub-manager (las sub-instancias no se anidan).
 #
 # Journalctl:
-#   journalctl -u vcd     | grep '\[SAMBA-VCD\]'   # cuando lo lanza vcd
-#   journalctl -u vcd-sub | grep '\[SAMBA-VCD\]'   # cuando corre standalone
+#   journalctl -u val     | grep '\[SAMBA-VAL\]'   # cuando lo lanza val
+#   journalctl -u val-sub | grep '\[SAMBA-VAL\]'   # cuando corre standalone
 
 set -euo pipefail
 
@@ -23,12 +23,12 @@ set -euo pipefail
 # Argumento y validación
 # ---------------------------------------------------------------------------
 if [[ $# -lt 1 || -z "$1" ]]; then
-    echo "Uso: vcd-sub <name>" >&2
+    echo "Uso: val-sub <name>" >&2
     exit 1
 fi
 
 NAME="$1"
-INSTANCE_DIR="/etc/vcd/vcd.sub/${NAME}"
+INSTANCE_DIR="/etc/val/val.sub/${NAME}"
 
 if [[ ! -d "$INSTANCE_DIR" ]]; then
     echo "Error: sub-instancia '$NAME' no encontrada en $INSTANCE_DIR" >&2
@@ -39,16 +39,16 @@ fi
 # Rutas derivadas — definidas ANTES de load_conf para que los defaults
 # de la instancia puedan sobreescribir HOOKS_DIR si el admin lo desea
 # ---------------------------------------------------------------------------
-STATE_DIR="/var/lib/vcd/sub/${NAME}"
+STATE_DIR="/var/lib/val/sub/${NAME}"
 VERSION_FILE="${STATE_DIR}/version"
 CLIENTS_FILE="${STATE_DIR}/clients.json"
 TMP_CLIENTS="${STATE_DIR}/clients.json.tmp"
-CONF_FILE="${INSTANCE_DIR}/vcd.conf"
-CONF_DIR="${INSTANCE_DIR}/vcd.conf.d"
-LOG_TAG="[${NAME^^}-VCD]"
+CONF_FILE="${INSTANCE_DIR}/val.conf"
+CONF_DIR="${INSTANCE_DIR}/val.conf.d"
+LOG_TAG="[${NAME^^}-VAL]"
 
 # ---------------------------------------------------------------------------
-# Defaults de configuración (heredados de /etc/vcd/vcd.conf y sobreescritos
+# Defaults de configuración (heredados de /etc/val/val.conf y sobreescritos
 # por la config de instancia)
 # ---------------------------------------------------------------------------
 SOURCE="vas"
@@ -90,7 +90,7 @@ load_conf() {
     done < <(grep -v '^\s*#' "$file" | grep '=' || true)
 }
 
-load_conf "/etc/vcd/vcd.conf"
+load_conf "/etc/val/val.conf"
 load_conf "$CONF_FILE"
 if [[ -d "$CONF_DIR" ]]; then
     for cfg in "$CONF_DIR"/*.conf; do
@@ -110,7 +110,7 @@ fi
 
 log() { echo "$LOG_TAG $*"; }
 
-log "=== Iniciando ${NAME}-vcd ==="
+log "=== Iniciando ${NAME}-val ==="
 log "SOURCE:           $SOURCE"
 log "FILTER:           $FILTER"
 log "CHECK:            ${CHECK_SECONDS}s"
@@ -141,10 +141,10 @@ if [[ "$SOURCE" == "vac" && -n "$GLOBAL_KEY" ]]; then
 fi
 
 # ---------------------------------------------------------------------------
-# Bump listener (VCD-Aware)
+# Bump listener (VAL-Aware)
 # ---------------------------------------------------------------------------
 BUMP_PID=""
-BUMP_FIFO="/var/run/vcd/sub/${NAME}.bump.fifo"
+BUMP_FIFO="/var/run/val/sub/${NAME}.bump.fifo"
 
 interruptible_sleep() {
     if [[ "$BUMP_LISTEN_PORT" != "0" ]]; then
@@ -206,7 +206,7 @@ fetch_clients() {
                 log "[FETCH] Inventario guardado: $count equipo(s)"
                 return 0
             else
-                log "[VCD-ERROR] Error descargando inventario."
+                log "[VAL-ERROR] Error descargando inventario."
                 rm -f "$TMP_CLIENTS"
                 return 1
             fi
@@ -220,7 +220,7 @@ fetch_clients() {
                 log "[FETCH] Inventario copiado desde VAC: $count equipo(s)"
                 return 0
             else
-                log "[VCD-ERROR] No se encontró ${vac_clients}."
+                log "[VAL-ERROR] No se encontró ${vac_clients}."
                 return 1
             fi
             ;;
@@ -243,7 +243,7 @@ materialize_keys() {
             count="$(jq '.clients | length' "$out" 2>/dev/null || echo '?')"
             log "[MATERIALIZE] ${key}_clients.json → $count equipo(s)"
         else
-            log "[VCD-ERROR] Error materializando ${key}_clients.json"
+            log "[VAL-ERROR] Error materializando ${key}_clients.json"
             rm -f "$tmp"
         fi
     done
@@ -261,15 +261,15 @@ dispatch_hooks() {
         [[ -f "$hook" && -x "$hook" ]] || continue
         (( ++hook_count ))
         log "[HOOKS] Ejecutando: $(basename "$hook")"
-        if VCD_VERSION="$version" \
-           VCD_FILTER="$FILTER" \
-           VCD_SOURCE="$SOURCE" \
-           VCD_EXTRA_KEY="$GLOBAL_KEY" \
-           VCD_STATE_DIR="$STATE_DIR" \
+        if VAL_VERSION="$version" \
+           VAL_FILTER="$FILTER" \
+           VAL_SOURCE="$SOURCE" \
+           VAL_EXTRA_KEY="$GLOBAL_KEY" \
+           VAL_STATE_DIR="$STATE_DIR" \
            "$hook" < "$stdin_src"; then
             log "[HOOKS] OK: $(basename "$hook")"
         else
-            log "[VCD-ERROR] Hook $(basename "$hook") terminó con error."
+            log "[VAL-ERROR] Hook $(basename "$hook") terminó con error."
             (( ++hook_errors ))
         fi
     done
@@ -314,7 +314,7 @@ while true; do
     log "[SYNC] Nueva versión detectada: $local_version → $remote_version"
 
     if ! fetch_clients; then
-        log "[VCD-ERROR] No se pudo obtener el inventario. Reintentando en ${RETRY_SECONDS}s."
+        log "[VAL-ERROR] No se pudo obtener el inventario. Reintentando en ${RETRY_SECONDS}s."
         sleep "$RETRY_SECONDS"
         continue
     fi

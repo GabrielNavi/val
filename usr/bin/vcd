@@ -50,6 +50,13 @@ BUMP_LISTEN_PORT="0"
 PARALLELIZATION="false"
 
 # ---------------------------------------------------------------------------
+# Logging
+# ---------------------------------------------------------------------------
+log() {
+    echo "$LOG_TAG $*"
+}
+
+# ---------------------------------------------------------------------------
 # Carga de configuración
 # ---------------------------------------------------------------------------
 
@@ -81,7 +88,7 @@ load_conf() {
         esac
     done < <(grep -v '^\s*#' "$file" | grep '=' || true)
 
-    echo "[VCD] Config cargada desde $file: $loaded clave(s)"
+    log "Config cargada desde $file: $loaded clave(s)"
 }
 
 load_conf "$CONF_FILE"
@@ -101,15 +108,8 @@ mkdir -p "$STATE_DIR"
 
 if [[ ! -f "$VERSION_FILE" ]]; then
     echo "0" > "$VERSION_FILE"
-    echo "[VCD] Fichero de versión inicializado: $VERSION_FILE → 0"
+    log "Fichero de versión inicializado: $VERSION_FILE → 0"
 fi
-
-# ---------------------------------------------------------------------------
-# Logging
-# ---------------------------------------------------------------------------
-log() {
-    echo "$LOG_TAG $*" >&2
-}
 
 # ---------------------------------------------------------------------------
 # Validación de configuración

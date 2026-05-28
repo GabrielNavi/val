@@ -16,7 +16,19 @@
 set -euo pipefail
 
 LOG_TAG="${LOG_TAG:-[VCD]}"
-log() { echo "$LOG_TAG $*" >&2; }
+
+# Leer LOG_LEVEL del fichero de configuración principal para respetar LOG_LEVEL=no.
+LOG_LEVEL="normal"
+if [[ -f /etc/vcd/vcd.conf ]]; then
+    _ll="$(grep -m1 '^LOG_LEVEL[[:space:]]*=' /etc/vcd/vcd.conf \
+        | cut -d= -f2- | tr -d '"' | xargs 2>/dev/null || true)"
+    [[ -n "$_ll" ]] && LOG_LEVEL="$_ll"
+fi
+
+log() {
+    [[ "$LOG_LEVEL" == "no" ]] && return 0
+    echo "$LOG_TAG $*"
+}
 
 # ---------------------------------------------------------------------------
 # Guarda contra doble arranque

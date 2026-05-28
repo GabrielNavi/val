@@ -1,3 +1,16 @@
+vx-dga-l-vcd (0.9-5~rc) unstable; urgency=low
+
+  * vcd: corregido orden de definición — log() se define ahora antes de
+    load_conf(), eliminando los echo directos que bypasaban LOG_LEVEL=no
+    durante la carga de configuración e inicialización del fichero de versión.
+  * vcd: log() usa stdout en vez de stderr, alineado con VAC y VAF.
+  * vcd-sub: log() usa stdout en vez de stderr.
+  * vcd-sub-manager: añadido soporte a LOG_LEVEL — lee LOG_LEVEL de
+    /etc/vcd/vcd.conf al arrancar; con LOG_LEVEL=no suprime todos los mensajes
+    (antes siempre imprimía). log() usa stdout en vez de stderr.
+
+ -- Gabriel Navia <correos@gabrielnav.es>  Wed, 28 May 2026 12:00:00 +0200
+
 vx-dga-l-vcd (0.9-4~rc) unstable; urgency=low
 
   * vcd, vcd-sub: FILTER acepta ahora 'archived' además de active/inactive/all.

@@ -2,7 +2,7 @@ Source: vx-dga-l-val
 Section: admin
 Priority: optional
 Maintainer: Gabriel Navia <correos@gabrielnav.es>
-Standards-Version: 4.6.0
+Standards-Version: 4.7.0
 Build-Depends: debhelper-compat (= 13)
 
 Package: vx-dga-l-val

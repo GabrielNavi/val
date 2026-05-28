@@ -75,6 +75,25 @@ sudo systemctl restart val
 | `DISPATCH_STDIN` | `true` | `true`: hooks reciben el inventario por stdin (compat). `false`: stdin vacío; hooks leen `VAL_STATE_DIR/KEY_clients.json`. |
 | `BUMP_LISTEN_PORT` | `0` | Puerto UDP de escucha para notificaciones push de VAS. `0` = desactivado (solo polling). Con valor distinto de 0, cualquier datagrama UDP recibido interrumpe el `sleep` del ciclo e inicia una comprobación inmediata. |
 | `PARALLELIZATION` | `false` | `true`: arranca `val-sub-manager` en background al iniciar el daemon principal. Gestiona sub-instancias independientes. |
+| `USE_VAT` | `false` | Si `true`, aplica `vat-operate` en dos puntos del ciclo. Requiere `vx-dga-l-vat`. |
+| `VAT_PRESET` | _(vacío)_ | Nombre del preset VAT a aplicar. Obligatorio si `USE_VAT=true`. |
+
+## Integración con VAT
+
+Con `USE_VAT=true` y `vx-dga-l-vat` instalado, VAL saneea el inventario en **dos puntos** de cada ciclo:
+
+| Punto | Cuándo | Dirección | Qué saneea |
+|---|---|---|---|
+| 1 | Antes de `materialize_keys` | `upstream` | `clients.json` recién descargado de VAS/VAC |
+| 2 | Tras `materialize_keys` | `downstream` | Cada `KEY_clients.json` generado por clave |
+
+```bash
+# /etc/val/val.conf
+USE_VAT=true
+VAT_PRESET=centro
+```
+
+El preset puede definir reglas distintas para `direction: upstream` y `direction: downstream`, permitiendo diferente comportamiento en cada punto con un único `VAT_PRESET`. Si `vat-operate` no está instalado se emite `[VAT-WARN]` y el fichero se conserva sin modificar.
 
 ## Hooks
 

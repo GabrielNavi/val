@@ -48,6 +48,8 @@ LOCAL_KEY_LIST=""
 DISPATCH_STDIN="true"
 BUMP_LISTEN_PORT="0"
 PARALLELIZATION="false"
+USE_VAT="false"
+VAT_PRESET=""
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -85,6 +87,8 @@ load_conf() {
             DISPATCH_STDIN)    DISPATCH_STDIN="$val";    (( ++loaded )) ;;
             BUMP_LISTEN_PORT)  BUMP_LISTEN_PORT="$val";  (( ++loaded )) ;;
             PARALLELIZATION)  PARALLELIZATION="$val";  (( ++loaded )) ;;
+            USE_VAT)          USE_VAT="$val";          (( ++loaded )) ;;
+            VAT_PRESET)       VAT_PRESET="$val";       (( ++loaded )) ;;
         esac
     done < <(grep -v '^\s*#' "$file" | grep '=' || true)
 
@@ -125,6 +129,8 @@ log "GLOBAL_KEY:     ${GLOBAL_KEY:-(ninguna)}"
 log "LOCAL_KEY_LIST: ${LOCAL_KEY_LIST:-(ninguna)}"
 log "DISPATCH_STDIN: $DISPATCH_STDIN"
 log "BUMP_LISTEN_PORT: ${BUMP_LISTEN_PORT} ($([ "$BUMP_LISTEN_PORT" != "0" ] && echo 'activo' || echo 'desactivado'))"
+log "USE_VAT:          $USE_VAT"
+[[ "$USE_VAT" == "true" ]] && log "VAT_PRESET:       $VAT_PRESET"
 [[ "$SOURCE" == "vas" ]] && log "VAS_HOST:       ${VAS_HOST:-'(no definido)'}"
 [[ "$SOURCE" == "vac" ]] && log "VAC_STATE_DIR:  $VAC_STATE_DIR"
 
@@ -277,6 +283,22 @@ materialize_keys() {
             )]}' \
             "$CLIENTS_FILE" > "$tmp" 2>/dev/null; then
             mv "$tmp" "$out"
+
+            # VAT punto 2: sanear cada vista materializada por clave (direction=downstream)
+            if [[ "$USE_VAT" == "true" && -n "$VAT_PRESET" ]]; then
+                if command -v vat-operate &>/dev/null; then
+                    local vat_out
+                    vat_out="$(vat-operate --source-component VAL --direction downstream \
+                        --preset "$VAT_PRESET" < "$out" 2>/dev/null)" \
+                    && echo "$vat_out" > "${out}.tmp" \
+                    && mv "${out}.tmp" "$out" \
+                    && log "[VAT] ${key}_clients.json saneado (downstream) con preset '$VAT_PRESET'" \
+                    || log "[VAT-WARN] vat-operate falló para ${key}_clients.json."
+                else
+                    log "[VAT-WARN] USE_VAT=true pero vat-operate no encontrado."
+                fi
+            fi
+
             local count
             count="$(jq '.clients | length' "$out" 2>/dev/null || echo '?')"
             log "[MATERIALIZE] ${key}_clients.json → $count equipo(s)"
@@ -379,6 +401,22 @@ while true; do
         log "[VAL-ERROR] No se pudo obtener el inventario. Reintentando en ${RETRY_SECONDS}s."
         sleep "$RETRY_SECONDS"
         continue
+    fi
+
+    # --- VAT punto 1: sanear clients.json antes de materializar y despachar ---
+    # direction=upstream: datos llegando desde VAS/VAC hacia VAL.
+    if [[ "$USE_VAT" == "true" && -n "$VAT_PRESET" ]]; then
+        if command -v vat-operate &>/dev/null; then
+            local vat_out
+            vat_out="$(vat-operate --source-component VAL --direction upstream \
+                --preset "$VAT_PRESET" < "$CLIENTS_FILE" 2>/dev/null)" \
+            && echo "$vat_out" > "${CLIENTS_FILE}.tmp" \
+            && mv "${CLIENTS_FILE}.tmp" "$CLIENTS_FILE" \
+            && log "[VAT] clients.json saneado (upstream) con preset '$VAT_PRESET'" \
+            || log "[VAT-WARN] vat-operate falló. clients.json sin sanear."
+        else
+            log "[VAT-WARN] USE_VAT=true pero vat-operate no encontrado."
+        fi
     fi
 
     # --- Paso 3: Materializar vistas por clave (LOCAL_KEY_LIST) --------------

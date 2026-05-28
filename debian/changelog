@@ -1,3 +1,26 @@
+vx-dga-l-val (0.9-8~rc) unstable; urgency=low
+
+  * debian/control: Suggests: vx-dga-l-vat.
+  * README.md, wiki Configuracion.md: documentados USE_VAT y VAT_PRESET
+    con tabla de los dos puntos de saneamiento y semántica de direcciones.
+
+ -- Gabriel Navia <correos@gabrielnav.es>  Wed, 28 May 2026 21:00:00 +0200
+
+vx-dga-l-val (0.9-7~rc) unstable; urgency=low
+
+  * Integración opcional con vx-dga-l-vat (Versatile Autoregistration Transformer).
+  * val: nuevas variables USE_VAT y VAT_PRESET en defaults y parser.
+  * val: dos puntos de saneamiento con semántica de dirección explícita:
+    - upstream (direction=upstream): clients.json recién descargado de VAS/VAC,
+      antes de materialize_keys. Sanea los datos que llegan a VAL desde la fuente.
+    - downstream (direction=downstream): cada KEY_clients.json generado por
+      materialize_keys, antes de que los hooks lo lean. Sanea cada vista por clave.
+  * Todos los puntos VAT emiten [VAT-WARN] si USE_VAT=true pero vat-operate
+    no está instalado, haciendo fallback limpio (passthrough del JSON original).
+  * val.conf: USE_VAT y VAT_PRESET documentados con explicación de direcciones.
+
+ -- Gabriel Navia <correos@gabrielnav.es>  Wed, 28 May 2026 20:00:00 +0200
+
 vx-dga-l-val (0.9-6~rc) unstable; urgency=low
 
   * debian/control: Standards-Version: 4.7.0.

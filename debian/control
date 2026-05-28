@@ -9,6 +9,7 @@ Package: vx-dga-l-val
 Architecture: all
 Depends: bash, curl, jq, coreutils
 Recommends: vx-dga-l-vas | vx-dga-l-vac, netcat-openbsd
+Suggests: vx-dga-l-vat
 Description: Versatile Autoregistration Listener
  Daemon generico que observa cambios de version en el inventario de VAS o VAC
  y distribuye el resultado filtrado a hooks configurables mediante tuberias.

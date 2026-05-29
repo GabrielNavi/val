@@ -1,3 +1,22 @@
+vx-dga-l-val (0.9-15~rc) unstable; urgency=low
+
+  * val-common.sh: PARALLELIZATION eliminado (no se lee). Nuevo PARALLEL_MODE
+    (both|only_parallel|only_main, default: both).
+  * val: PARALLEL_MODE=only_parallel hace exec val-sub-manager (main silenciado);
+    both lanza el manager en background + continúa el bucle principal;
+    only_main no lanza el manager. Añadido PARALLEL_MODE al startup log.
+  * val-sub-manager: solo lanza sub-instancias con .enabled. Fail counter con
+    MAX_FAILS=5 y MIN_UPTIME_SECS=30: instancias que mueren repetidamente en
+    menos de 30s se marcan como muertas y dejan de reiniciarse.
+  * val-sub-instance: --create usa /usr/share/val/instance-template/val.conf
+    como base; crea .enabled por defecto (activa inmediatamente). --list añade
+    columna ENABLED.
+  * usr/share/val/instance-template/val.conf: nueva plantilla de sub-instancia.
+  * val.conf, val.conf.defaults: PARALLELIZATION sustituido por PARALLEL_MODE.
+  * debian/install: añadido instance-template/val.conf.
+
+ -- Gabriel Navia <correos@gabrielnav.es>  Fri, 30 May 2026 12:00:00 +0200
+
 vx-dga-l-val (0.9-14~rc) unstable; urgency=low
 
   * postinst: en instalación fresca, activa BUMP_LISTEN_PORT=9876 en

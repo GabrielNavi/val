@@ -33,7 +33,7 @@ GLOBAL_KEY="${GLOBAL_KEY:-}"
 LOCAL_KEY_LIST="${LOCAL_KEY_LIST:-}"
 DISPATCH_STDIN="${DISPATCH_STDIN:-true}"
 BUMP_LISTEN_PORT="${BUMP_LISTEN_PORT:-0}"
-PARALLELIZATION="${PARALLELIZATION:-false}"
+PARALLEL_MODE="${PARALLEL_MODE:-both}"
 USE_VAT="${USE_VAT:-false}"
 VAT_PRESET="${VAT_PRESET:-}"
 HOOK_TIMEOUT_SECONDS="${HOOK_TIMEOUT_SECONDS:-30}"
@@ -93,7 +93,7 @@ load_conf() {
             LOCAL_KEY_LIST)       LOCAL_KEY_LIST="$val";       (( ++loaded )) ;;
             DISPATCH_STDIN)       DISPATCH_STDIN="$val";       (( ++loaded )) ;;
             BUMP_LISTEN_PORT)     BUMP_LISTEN_PORT="$val";     (( ++loaded )) ;;
-            PARALLELIZATION)      PARALLELIZATION="$val";      (( ++loaded )) ;;
+            PARALLEL_MODE)        PARALLEL_MODE="$val";        (( ++loaded )) ;;
             USE_VAT)              USE_VAT="$val";              (( ++loaded )) ;;
             VAT_PRESET)           VAT_PRESET="$val";           (( ++loaded )) ;;
             HOOK_TIMEOUT_SECONDS) HOOK_TIMEOUT_SECONDS="$val"; (( ++loaded )) ;;

@@ -76,19 +76,32 @@ log "LOCAL_KEY_LIST:   ${LOCAL_KEY_LIST:-(ninguna)}"
 log "DISPATCH_STDIN:   $DISPATCH_STDIN"
 log "HOOK_TIMEOUT:     ${HOOK_TIMEOUT_SECONDS}s ($([ "$HOOK_TIMEOUT_SECONDS" != "0" ] && echo 'activo' || echo 'desactivado'))"
 log "BUMP_LISTEN_PORT: ${BUMP_LISTEN_PORT} ($([ "$BUMP_LISTEN_PORT" != "0" ] && echo 'activo' || echo 'desactivado'))"
+log "PARALLEL_MODE:    $PARALLEL_MODE"
 log "USE_VAT:          $USE_VAT"
 [[ "$USE_VAT" == "true" ]] && log "VAT_PRESET:       $VAT_PRESET"
 [[ "$SOURCE" == "vas" ]] && log "VAS_HOST:         ${VAS_HOST:-'(no definido)'}"
 [[ "$SOURCE" == "vac" ]] && log "VAC_STATE_DIR:    $VAC_STATE_DIR"
 
-if [[ "$PARALLELIZATION" == "true" ]]; then
-    if command -v val-sub-manager >/dev/null 2>&1; then
-        val-sub-manager &
-        log "[PARALLEL] val-sub-manager lanzado (PID $!)"
-    else
-        log "[ERROR] PARALLELIZATION=true pero val-sub-manager no encontrado. Continuando sin sub-instancias."
-    fi
-fi
+case "$PARALLEL_MODE" in
+    both|only_parallel)
+        if command -v val-sub-manager >/dev/null 2>&1; then
+            if [[ "$PARALLEL_MODE" == "only_parallel" ]]; then
+                log "[PARALLEL] PARALLEL_MODE=only_parallel: ejecutando solo sub-instancias."
+                exec val-sub-manager
+            fi
+            val-sub-manager &
+            log "[PARALLEL] val-sub-manager lanzado (PID $!)"
+        else
+            log "[ERROR] val-sub-manager no encontrado. Continuando en modo only_main."
+        fi
+        ;;
+    only_main)
+        log_debug "[PARALLEL] PARALLEL_MODE=only_main: sub-instancias desactivadas."
+        ;;
+    *)
+        log "[WARN] PARALLEL_MODE inválido: '$PARALLEL_MODE'. Usando only_main."
+        ;;
+esac
 
 case "$FILTER" in
     active|inactive|archived|all) ;;

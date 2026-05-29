@@ -1,13 +1,19 @@
 #!/bin/bash
 # val-sub-manager — Supervisor de sub-instancias VAL.
 #
-# Lanzado por val (PARALLELIZATION=true) o por val-sub.service (standalone).
-# Escanea /etc/val/val.sub/*/ y arranca un proceso val-sub <name> por cada
-# carpeta que contenga val.conf. Supervisa los hijos cada 30s y los reinicia
-# si mueren. Al recibir SIGTERM/SIGINT propaga la señal a todos los hijos.
+# Escanea /etc/val/val.sub/*/ y lanza un proceso val-sub <name> por cada
+# carpeta que contenga val.conf Y un fichero .enabled. Las carpetas sin
+# .enabled se ignoran (instancias desactivadas o plantillas).
 #
-# Guarda de doble arranque: si ya existe un val-sub-manager vivo (pidfile en
-# /var/lib/val/val-sub-manager.pid), sale inmediatamente.
+# Tras MAX_FAILS arranques fallidos consecutivos (proceso muerto en menos de
+# MIN_UPTIME_SECS segundos), la instancia se marca como muerta y no se reinicia.
+# Un arranque que supera MIN_UPTIME_SECS reinicia el contador de fallos.
+#
+# Puede correr de dos maneras:
+#   - Como hijo de val (PARALLEL_MODE=both): sus logs van al journal de val.service.
+#   - Como servicio independiente (val-sub.service): sus logs van a val-sub.service.
+#
+# Guarda de doble arranque: si ya existe un val-sub-manager vivo, sale inmediatamente.
 #
 # Journalctl:
 #   journalctl -u val     | grep '\[PARALLEL\]'   # cuando lo lanza val
@@ -16,8 +22,10 @@
 set -euo pipefail
 
 LOG_TAG="${LOG_TAG:-[VAL]}"
+MAX_FAILS=5
+MIN_UPTIME_SECS=30
 
-# Leer LOG_LEVEL del fichero de configuración principal para respetar LOG_LEVEL=no.
+# Leer LOG_LEVEL del fichero de configuración principal
 LOG_LEVEL="normal"
 if [[ -f /etc/val/val.conf ]]; then
     _ll="$(grep -m1 '^LOG_LEVEL[[:space:]]*=' /etc/val/val.conf \
@@ -29,12 +37,15 @@ log() {
     [[ "$LOG_LEVEL" == "no" ]] && return 0
     echo "$LOG_TAG $*"
 }
+log_debug() {
+    [[ "$LOG_LEVEL" != "debug" ]] && return 0
+    echo "$LOG_TAG [DEBUG] $*"
+}
 
 # ---------------------------------------------------------------------------
 # Guarda contra doble arranque
 # ---------------------------------------------------------------------------
 PIDFILE="/var/lib/val/val-sub-manager.pid"
-
 mkdir -p "$(dirname "$PIDFILE")"
 
 if [[ -f "$PIDFILE" ]]; then
@@ -44,7 +55,6 @@ if [[ -f "$PIDFILE" ]]; then
         exit 0
     fi
 fi
-
 echo "$$" > "$PIDFILE"
 
 # ---------------------------------------------------------------------------
@@ -67,7 +77,7 @@ cleanup() {
 trap cleanup SIGTERM SIGINT
 
 # ---------------------------------------------------------------------------
-# Arranque: lanzar una sub-instancia por carpeta con val.conf
+# Arranque: lanzar una sub-instancia por carpeta con val.conf + .enabled
 # ---------------------------------------------------------------------------
 SUB_DIR="/etc/val/val.sub"
 
@@ -77,11 +87,15 @@ if [[ ! -d "$SUB_DIR" ]]; then
     exit 0
 fi
 
+declare -A FAIL_COUNT
+declare -A START_TIME
+
 launched=0
 for instance_dir in "$SUB_DIR"/*/; do
     [[ -d "$instance_dir" ]] || continue
     name="$(basename "$instance_dir")"
-    [[ -f "${instance_dir}/val.conf" ]] || continue
+    [[ -f "${instance_dir}/val.conf" ]]  || continue
+    [[ -f "${instance_dir}/.enabled" ]]  || { log_debug "[PARALLEL] ${name}: sin .enabled — ignorada."; continue; }
 
     source_val="$(grep -E '^SOURCE\s*=' "${instance_dir}/val.conf" \
         | head -1 | cut -d= -f2- | tr -d '"' | xargs 2>/dev/null || echo 'vas')"
@@ -91,12 +105,14 @@ for instance_dir in "$SUB_DIR"/*/; do
 
     val-sub "$name" &
     CHILD_PIDS[$name]=$!
+    FAIL_COUNT[$name]=0
+    START_TIME[$name]=$(date +%s)
     log "[PARALLEL] Lanzado ${name}-val (${info}) (PID ${CHILD_PIDS[$name]})"
     (( ++launched ))
 done
 
 if [[ $launched -eq 0 ]]; then
-    log "[PARALLEL] No se encontraron sub-instancias configuradas en $SUB_DIR"
+    log "[PARALLEL] Sin sub-instancias activas (.enabled) en $SUB_DIR"
     rm -f "$PIDFILE"
     exit 0
 fi
@@ -108,12 +124,27 @@ log "[PARALLEL] $launched sub-instancia(s) iniciada(s)."
 # ---------------------------------------------------------------------------
 while true; do
     sleep 30
+    now=$(date +%s)
     for name in "${!CHILD_PIDS[@]}"; do
         pid="${CHILD_PIDS[$name]}"
         if ! kill -0 "$pid" 2>/dev/null; then
-            log "[PARALLEL] ${name}-val (PID $pid) ha terminado inesperadamente. Reiniciando..."
+            uptime=$(( now - ${START_TIME[$name]:-now} ))
+            if (( uptime >= MIN_UPTIME_SECS )); then
+                FAIL_COUNT[$name]=0
+                log "[PARALLEL] ${name}-val (PID $pid) terminó tras ${uptime}s. Reiniciando..."
+            else
+                FAIL_COUNT[$name]=$(( ${FAIL_COUNT[$name]:-0} + 1 ))
+                fails="${FAIL_COUNT[$name]}"
+                if (( fails >= MAX_FAILS )); then
+                    log "[PARALLEL] ${name}-val falló ${fails} veces seguidas (uptime < ${MIN_UPTIME_SECS}s). Marcado como muerto."
+                    unset CHILD_PIDS[$name]
+                    continue
+                fi
+                log "[PARALLEL] ${name}-val terminó en ${uptime}s (fallo $fails/$MAX_FAILS). Reiniciando..."
+            fi
             val-sub "$name" &
             CHILD_PIDS[$name]=$!
+            START_TIME[$name]=$(date +%s)
             log "[PARALLEL] ${name}-val relanzado (PID ${CHILD_PIDS[$name]})"
         fi
     done

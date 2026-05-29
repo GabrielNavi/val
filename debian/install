@@ -7,3 +7,4 @@ etc/val/val.conf etc/val/
 lib/systemd/system/val.service lib/systemd/system/
 lib/systemd/system/val-sub.service lib/systemd/system/
 usr/share/val/val.conf.defaults usr/share/val/
+usr/share/val/instance-template/val.conf usr/share/val/instance-template/

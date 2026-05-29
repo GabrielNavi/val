@@ -21,7 +21,7 @@
 
 set -euo pipefail
 
-DEFAULTS_FILE="/usr/share/val/val.conf.defaults"
+TEMPLATE_FILE="/usr/share/val/instance-template/val.conf"
 SUB_CONFIG_BASE="/etc/val/val.sub"
 SUB_STATE_BASE="/var/lib/val/sub"
 
@@ -85,36 +85,31 @@ do_create() {
         exit 1
     fi
 
-    if [[ ! -f "$DEFAULTS_FILE" ]]; then
-        echo "Error: no se encontró $DEFAULTS_FILE." >&2
+    if [[ ! -f "$TEMPLATE_FILE" ]]; then
+        echo "Error: no se encontró $TEMPLATE_FILE." >&2
         exit 1
     fi
 
     mkdir -p "${instance_dir}/val.conf.d"
     mkdir -p "${instance_dir}/hooks.d"
 
-    # Generar val.conf desde defaults, ajustando SOURCE y VAS_HOST
+    # Generar val.conf desde template, ajustando SOURCE y VAS_HOST
     local conf_out="${instance_dir}/val.conf"
-    {
-        echo "# val.conf — sub-instancia '${NAME}'"
-        echo "# Generado por val-sub-instance el $(date -u '+%Y-%m-%d %H:%M UTC')"
-        echo "# Hereda los defaults de /etc/val/val.conf."
-        echo "# Solo es necesario definir aquí lo que difiere de la instancia principal."
-        echo ""
-        echo "SOURCE=${SOURCE_VAL}"
-        if [[ "$SOURCE_VAL" == "vas" ]]; then
-            echo "VAS_HOST=${VAS_URL}"
-        fi
-    } > "$conf_out"
+    sed \
+        -e "s|^SOURCE=.*|SOURCE=${SOURCE_VAL}|" \
+        -e "s|^VAS_HOST=.*|VAS_HOST=${VAS_URL}|" \
+        "$TEMPLATE_FILE" > "$conf_out"
 
-    echo "Sub-instancia '${NAME}' creada:"
-    echo "  Configuración: ${instance_dir}/val.conf"
+    # Activar la instancia por defecto (rm .enabled para desactivar sin borrar)
+    touch "${instance_dir}/.enabled"
+
+    echo "Sub-instancia '${NAME}' creada y activada:"
+    echo "  Configuración: ${conf_out}"
     echo "  Hooks:         ${instance_dir}/hooks.d/"
     echo "  Overlays:      ${instance_dir}/val.conf.d/"
-    echo "  Estado (al arrancar): ${SUB_STATE_BASE}/${NAME}/"
+    echo "  .enabled:      ${instance_dir}/.enabled (rm para desactivar)"
     echo ""
-    echo "Para activarla: systemctl restart val   (si PARALLELIZATION=true)"
-    echo "  o bien:       systemctl restart val-sub (standalone)"
+    echo "Para aplicar: systemctl restart val  (o val-sub si usa el servicio independiente)"
 }
 
 # ---------------------------------------------------------------------------
@@ -158,8 +153,8 @@ do_list() {
     fi
 
     local found=0
-    printf "%-20s %-10s %-35s %s\n" "NOMBRE" "SOURCE" "VAS_HOST / VAC_STATE_DIR" "ESTADO"
-    printf "%-20s %-10s %-35s %s\n" "------" "------" "------------------------" "------"
+    printf "%-20s %-10s %-30s %-8s %s\n" "NOMBRE" "SOURCE" "VAS_HOST / VAC_STATE_DIR" "ENABLED" "ESTADO"
+    printf "%-20s %-10s %-30s %-8s %s\n" "------" "------" "------------------------" "-------" "------"
 
     for instance_dir in "$SUB_CONFIG_BASE"/*/; do
         [[ -d "$instance_dir" ]] || continue
@@ -167,7 +162,7 @@ do_list() {
         name="$(basename "$instance_dir")"
         [[ -f "${instance_dir}/val.conf" ]] || continue
 
-        local src host status
+        local src host enabled status
         src="$(grep -E '^SOURCE\s*=' "${instance_dir}/val.conf" \
             | head -1 | cut -d= -f2- | tr -d '"' | xargs 2>/dev/null || echo 'vas')"
         host="$(grep -E '^VAS_HOST\s*=' "${instance_dir}/val.conf" \
@@ -175,6 +170,7 @@ do_list() {
         [[ "$src" == "vac" ]] && host="$(grep -E '^VAC_STATE_DIR\s*=' \
             "${instance_dir}/val.conf" | head -1 | cut -d= -f2- | tr -d '"' \
             | xargs 2>/dev/null || echo '/var/lib/vac')"
+        enabled="$( [[ -f "${instance_dir}/.enabled" ]] && echo "sí" || echo "no")"
 
         if pgrep -f "val-sub ${name}$" > /dev/null 2>&1; then
             status="activa"
@@ -184,7 +180,7 @@ do_list() {
             status="nueva"
         fi
 
-        printf "%-20s %-10s %-35s %s\n" "$name" "$src" "${host:--}" "$status"
+        printf "%-20s %-10s %-30s %-8s %s\n" "$name" "$src" "${host:--}" "$enabled" "$status"
         (( ++found ))
     done
 

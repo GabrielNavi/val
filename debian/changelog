@@ -1,3 +1,23 @@
+vx-dga-l-val (0.9-12~rc) unstable; urgency=low
+
+  * Nuevo usr/lib/val/val-common.sh: librería compartida entre val y val-sub.
+    Contiene defaults de configuración (patrón :-), logging con LOG_LEVEL
+    (no|normal|debug) y LOG_FILE, load_conf() con todas las variables conocidas
+    incluyendo HOOK_TIMEOUT_SECONDS/LOG_LEVEL/LOG_FILE, get_remote_version(),
+    fetch_clients() (con VAT upstream integrado), materialize_keys() (con VAT
+    downstream), dispatch_hooks() (con timeout de TD6), interruptible_sleep().
+  * val: sustituidas las funciones inline por source /usr/lib/val/val-common.sh.
+    Elimina la duplicación respecto a val-sub; TD4 y futuros cambios solo
+    requieren editar val-common.sh.
+  * val-sub: sustituidas todas las funciones inline por source val-common.sh,
+    siguiendo el patrón de vac-sub (rutas de instancia definidas antes del
+    source para respetar los defaults con :-). val-sub hereda ahora: LOG_LEVEL,
+    HOOK_TIMEOUT_SECONDS (TD6), VAT upstream en fetch_clients(), VAT downstream
+    en materialize_keys(), y la versión extendida de log().
+  * debian/install: añadido usr/lib/val/val-common.sh.
+
+ -- Gabriel Navia <correos@gabrielnav.es>  Thu, 29 May 2026 16:30:00 +0200
+
 vx-dga-l-val (0.9-11~rc) unstable; urgency=low
 
   * val: nuevo HOOK_TIMEOUT_SECONDS (default: 30, 0=sin límite) — cada hook

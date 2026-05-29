@@ -1,4 +1,5 @@
 usr/bin/val usr/bin/
+usr/lib/val/val-common.sh usr/lib/val/
 usr/bin/val-sub usr/bin/
 usr/bin/val-sub-manager usr/bin/
 usr/bin/val-sub-instance usr/bin/

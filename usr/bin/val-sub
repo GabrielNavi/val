@@ -36,64 +36,20 @@ if [[ ! -d "$INSTANCE_DIR" ]]; then
 fi
 
 # ---------------------------------------------------------------------------
-# Rutas derivadas — definidas ANTES de load_conf para que los defaults
-# de la instancia puedan sobreescribir HOOKS_DIR si el admin lo desea
+# Rutas derivadas — definir ANTES de sourcear val-common.sh para que los
+# defaults con :- respeten los valores ya establecidos.
 # ---------------------------------------------------------------------------
 STATE_DIR="/var/lib/val/sub/${NAME}"
-VERSION_FILE="${STATE_DIR}/version"
-CLIENTS_FILE="${STATE_DIR}/clients.json"
-TMP_CLIENTS="${STATE_DIR}/clients.json.tmp"
 CONF_FILE="${INSTANCE_DIR}/val.conf"
 CONF_DIR="${INSTANCE_DIR}/val.conf.d"
+HOOKS_DIR="${INSTANCE_DIR}/hooks.d"
 LOG_TAG="[${NAME^^}-VAL]"
 
-# ---------------------------------------------------------------------------
-# Defaults de configuración (heredados de /etc/val/val.conf y sobreescritos
-# por la config de instancia)
-# ---------------------------------------------------------------------------
-SOURCE="vas"
-VAS_HOST=""
-VAC_STATE_DIR="/var/lib/vac"
-FILTER="active"
-CHECK_SECONDS=300
-RETRY_SECONDS=60
-HOOKS_DIR="${INSTANCE_DIR}/hooks.d"
-GLOBAL_KEY=""
-LOCAL_KEY_LIST=""
-DISPATCH_STDIN="true"
-BUMP_LISTEN_PORT="0"
-USE_VAT="false"
-VAT_PRESET=""
+source /usr/lib/val/val-common.sh
 
 # ---------------------------------------------------------------------------
-# Carga de configuración
+# Carga de configuración: base (herencia) + instancia (override)
 # ---------------------------------------------------------------------------
-load_conf() {
-    local file="$1"
-    [ -f "$file" ] || return 0
-    local loaded=0
-    while IFS='=' read -r key val; do
-        key="$(echo "$key" | xargs 2>/dev/null || true)"
-        val="$(echo "$val" | xargs 2>/dev/null | sed 's/^"//; s/"$//' || true)"
-        [ -z "$key" ] && continue
-        case "$key" in
-            SOURCE)           SOURCE="$val";           (( ++loaded )) ;;
-            VAS_HOST)         VAS_HOST="$val";         (( ++loaded )) ;;
-            VAC_STATE_DIR)    VAC_STATE_DIR="$val";    (( ++loaded )) ;;
-            FILTER)           FILTER="$val";           (( ++loaded )) ;;
-            CHECK_SECONDS)    CHECK_SECONDS="$val";    (( ++loaded )) ;;
-            RETRY_SECONDS)    RETRY_SECONDS="$val";    (( ++loaded )) ;;
-            HOOKS_DIR)        HOOKS_DIR="$val";        (( ++loaded )) ;;
-            GLOBAL_KEY)       GLOBAL_KEY="$val";       (( ++loaded )) ;;
-            LOCAL_KEY_LIST)   LOCAL_KEY_LIST="$val";   (( ++loaded )) ;;
-            DISPATCH_STDIN)   DISPATCH_STDIN="$val";   (( ++loaded )) ;;
-            BUMP_LISTEN_PORT) BUMP_LISTEN_PORT="$val"; (( ++loaded )) ;;
-            USE_VAT)          USE_VAT="$val";          (( ++loaded )) ;;
-            VAT_PRESET)       VAT_PRESET="$val";       (( ++loaded )) ;;
-        esac
-    done < <(grep -v '^\s*#' "$file" | grep '=' || true)
-}
-
 load_conf "/etc/val/val.conf"
 load_conf "$CONF_FILE"
 if [[ -d "$CONF_DIR" ]]; then
@@ -112,8 +68,6 @@ if [[ ! -f "$VERSION_FILE" ]]; then
     echo "0" > "$VERSION_FILE"
 fi
 
-log() { echo "$LOG_TAG $*"; }
-
 log "=== Iniciando ${NAME}-val ==="
 log "SOURCE:           $SOURCE"
 log "FILTER:           $FILTER"
@@ -124,7 +78,10 @@ log "STATE_DIR:        $STATE_DIR"
 log "GLOBAL_KEY:       ${GLOBAL_KEY:-(ninguna)}"
 log "LOCAL_KEY_LIST:   ${LOCAL_KEY_LIST:-(ninguna)}"
 log "DISPATCH_STDIN:   $DISPATCH_STDIN"
+log "HOOK_TIMEOUT:     ${HOOK_TIMEOUT_SECONDS}s ($([ "$HOOK_TIMEOUT_SECONDS" != "0" ] && echo 'activo' || echo 'desactivado'))"
 log "BUMP_LISTEN_PORT: $BUMP_LISTEN_PORT ($([ "$BUMP_LISTEN_PORT" != "0" ] && echo 'activo' || echo 'desactivado'))"
+log "USE_VAT:          $USE_VAT"
+[[ "$USE_VAT" == "true" ]] && log "VAT_PRESET:       $VAT_PRESET"
 [[ "$SOURCE" == "vas" ]] && log "VAS_HOST:         ${VAS_HOST:-'(no definido)'}"
 [[ "$SOURCE" == "vac" ]] && log "VAC_STATE_DIR:    $VAC_STATE_DIR"
 
@@ -150,14 +107,6 @@ fi
 BUMP_PID=""
 BUMP_FIFO="/var/run/val/sub/${NAME}.bump.fifo"
 
-interruptible_sleep() {
-    if [[ "$BUMP_LISTEN_PORT" != "0" ]]; then
-        read -t "$1" -r _bump <&3 2>/dev/null || true
-    else
-        sleep "$1"
-    fi
-}
-
 cleanup() {
     [[ -n "$BUMP_PID" ]] && kill "$BUMP_PID" 2>/dev/null || true
     [[ -e "$BUMP_FIFO" ]] && rm -f "$BUMP_FIFO" || true
@@ -173,114 +122,6 @@ if [[ "$BUMP_LISTEN_PORT" != "0" ]]; then
     BUMP_PID=$!
     log "[BUMP] Escuchando UDP en puerto $BUMP_LISTEN_PORT (PID $BUMP_PID)"
 fi
-
-# ---------------------------------------------------------------------------
-# Funciones
-# ---------------------------------------------------------------------------
-get_remote_version() {
-    local ver=""
-    case "$SOURCE" in
-        vas)
-            ver="$(curl -fsS --max-time 10 --connect-timeout 5 \
-                "${VAS_HOST%/}/version" 2>/dev/null \
-                | jq -r '.version' 2>/dev/null || echo "")"
-            ;;
-        vac)
-            local vac_version="${VAC_STATE_DIR}/version"
-            [[ -f "$vac_version" ]] && ver="$(tr -d '[:space:]' < "$vac_version")"
-            ;;
-    esac
-    echo "$ver"
-}
-
-fetch_clients() {
-    case "$SOURCE" in
-        vas)
-            local url="${VAS_HOST%/}/clients"
-            local params=""
-            [[ "$FILTER" != "active" ]] && params="status=${FILTER}"
-            [[ -n "$GLOBAL_KEY" ]] && params="${params:+${params}&}extra_key=${GLOBAL_KEY}"
-            [[ -n "$params" ]] && url="${url}?${params}"
-            log "[FETCH] Descargando inventario desde $url"
-            if curl -fsS --max-time 15 --connect-timeout 5 \
-                "$url" -o "$TMP_CLIENTS" 2>/dev/null; then
-                local count
-                count="$(jq '.clients | length' "$TMP_CLIENTS" 2>/dev/null || echo '?')"
-                mv "$TMP_CLIENTS" "$CLIENTS_FILE"
-                log "[FETCH] Inventario guardado: $count equipo(s)"
-                return 0
-            else
-                log "[VAL-ERROR] Error descargando inventario."
-                rm -f "$TMP_CLIENTS"
-                return 1
-            fi
-            ;;
-        vac)
-            local vac_clients="${VAC_STATE_DIR}/clients.json"
-            if [[ -f "$vac_clients" ]]; then
-                cp "$vac_clients" "$CLIENTS_FILE"
-                local count
-                count="$(jq '.clients | length' "$CLIENTS_FILE" 2>/dev/null || echo '?')"
-                log "[FETCH] Inventario copiado desde VAC: $count equipo(s)"
-                return 0
-            else
-                log "[VAL-ERROR] No se encontró ${vac_clients}."
-                return 1
-            fi
-            ;;
-    esac
-}
-
-materialize_keys() {
-    [[ -z "$LOCAL_KEY_LIST" ]] && return 0
-    [[ ! -f "$CLIENTS_FILE" ]] && return 0
-    for key in $LOCAL_KEY_LIST; do
-        local out="${STATE_DIR}/${key}_clients.json"
-        local tmp="${out}.tmp"
-        if jq --arg key "$key" \
-            '{clients: [.clients[]? | select(
-                (.extra_imperative  and (.extra_imperative  | has($key))) or
-                (.extra_informative and (.extra_informative | has($key)))
-            )]}' "$CLIENTS_FILE" > "$tmp" 2>/dev/null; then
-            mv "$tmp" "$out"
-            local count
-            count="$(jq '.clients | length' "$out" 2>/dev/null || echo '?')"
-            log "[MATERIALIZE] ${key}_clients.json → $count equipo(s)"
-        else
-            log "[VAL-ERROR] Error materializando ${key}_clients.json"
-            rm -f "$tmp"
-        fi
-    done
-}
-
-dispatch_hooks() {
-    local version="$1"
-    [[ ! -d "$HOOKS_DIR" ]] && { log "[HOOKS] Directorio no encontrado: $HOOKS_DIR"; return 0; }
-
-    local hook_count=0 hook_errors=0
-    local stdin_src="$CLIENTS_FILE"
-    [[ "$DISPATCH_STDIN" != "true" ]] && stdin_src="/dev/null"
-
-    for hook in "$HOOKS_DIR"/*; do
-        [[ -f "$hook" && -x "$hook" ]] || continue
-        (( ++hook_count ))
-        log "[HOOKS] Ejecutando: $(basename "$hook")"
-        if VAL_VERSION="$version" \
-           VAL_FILTER="$FILTER" \
-           VAL_SOURCE="$SOURCE" \
-           VAL_EXTRA_KEY="$GLOBAL_KEY" \
-           VAL_STATE_DIR="$STATE_DIR" \
-           "$hook" < "$stdin_src"; then
-            log "[HOOKS] OK: $(basename "$hook")"
-        else
-            log "[VAL-ERROR] Hook $(basename "$hook") terminó con error."
-            (( ++hook_errors ))
-        fi
-    done
-
-    [[ $hook_count -eq 0 ]] && log "[HOOKS] Sin hooks ejecutables en $HOOKS_DIR" || \
-        log "[HOOKS] $hook_count hook(s), $hook_errors error(es)"
-}
 
 # ---------------------------------------------------------------------------
 # Bucle principal

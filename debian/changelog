@@ -1,3 +1,13 @@
+vx-dga-l-val (0.9-11~rc) unstable; urgency=low
+
+  * val: nuevo HOOK_TIMEOUT_SECONDS (default: 30, 0=sin límite) — cada hook
+    en dispatch_hooks() se ejecuta bajo `timeout $HOOK_TIMEOUT_SECONDS`.
+    Exit code 124 (timeout expirado) se distingue del resto de errores en el log.
+    Consistente con el timeout=10 que VAC usa en sus extras-hooks.
+  * val.conf, val.conf.defaults: añadido HOOK_TIMEOUT_SECONDS=30 con comentario.
+
+ -- Gabriel Navia <correos@gabrielnav.es>  Thu, 29 May 2026 14:30:00 +0200
+
 vx-dga-l-val (0.9-10~rc) unstable; urgency=low
 
   * debian/postinst: añadido exit 0 explícito al final, alineado con

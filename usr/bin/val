@@ -50,6 +50,7 @@ BUMP_LISTEN_PORT="0"
 PARALLELIZATION="false"
 USE_VAT="false"
 VAT_PRESET=""
+HOOK_TIMEOUT_SECONDS="30"
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -86,9 +87,10 @@ load_conf() {
             LOCAL_KEY_LIST) LOCAL_KEY_LIST="$val"; (( ++loaded )) ;;
             DISPATCH_STDIN)    DISPATCH_STDIN="$val";    (( ++loaded )) ;;
             BUMP_LISTEN_PORT)  BUMP_LISTEN_PORT="$val";  (( ++loaded )) ;;
-            PARALLELIZATION)  PARALLELIZATION="$val";  (( ++loaded )) ;;
-            USE_VAT)          USE_VAT="$val";          (( ++loaded )) ;;
-            VAT_PRESET)       VAT_PRESET="$val";       (( ++loaded )) ;;
+            PARALLELIZATION)      PARALLELIZATION="$val";      (( ++loaded )) ;;
+            USE_VAT)              USE_VAT="$val";              (( ++loaded )) ;;
+            VAT_PRESET)           VAT_PRESET="$val";           (( ++loaded )) ;;
+            HOOK_TIMEOUT_SECONDS) HOOK_TIMEOUT_SECONDS="$val"; (( ++loaded )) ;;
         esac
     done < <(grep -v '^\s*#' "$file" | grep '=' || true)
 
@@ -135,6 +137,7 @@ log "GLOBAL_KEY:     ${GLOBAL_KEY:-(ninguna)}"
 log "LOCAL_KEY_LIST: ${LOCAL_KEY_LIST:-(ninguna)}"
 log "DISPATCH_STDIN: $DISPATCH_STDIN"
 log "BUMP_LISTEN_PORT: ${BUMP_LISTEN_PORT} ($([ "$BUMP_LISTEN_PORT" != "0" ] && echo 'activo' || echo 'desactivado'))"
+log "HOOK_TIMEOUT:     ${HOOK_TIMEOUT_SECONDS}s ($([ "$HOOK_TIMEOUT_SECONDS" != "0" ] && echo 'activo' || echo 'desactivado'))"
 log "USE_VAT:          $USE_VAT"
 [[ "$USE_VAT" == "true" ]] && log "VAT_PRESET:       $VAT_PRESET"
 [[ "$SOURCE" == "vas" ]] && log "VAS_HOST:       ${VAS_HOST:-'(no definido)'}"
@@ -336,19 +339,28 @@ dispatch_hooks() {
     local stdin_src="$CLIENTS_FILE"
     [[ "$DISPATCH_STDIN" != "true" ]] && stdin_src="/dev/null"
 
+    # Wrapper de timeout: vacío si HOOK_TIMEOUT_SECONDS=0 (sin límite)
+    local timeout_cmd=()
+    [[ "$HOOK_TIMEOUT_SECONDS" != "0" ]] && timeout_cmd=(timeout "$HOOK_TIMEOUT_SECONDS")
+
     for hook in "$HOOKS_DIR"/*; do
         [[ -f "$hook" && -x "$hook" ]] || continue
         (( ++hook_count ))
         log "[HOOKS] Ejecutando: $(basename "$hook")"
-        if VAL_VERSION="$version" \
-           VAL_FILTER="$FILTER" \
-           VAL_SOURCE="$SOURCE" \
-           VAL_EXTRA_KEY="$GLOBAL_KEY" \
-           VAL_STATE_DIR="$STATE_DIR" \
-           "$hook" < "$stdin_src"; then
+        local hook_exit=0
+        VAL_VERSION="$version" \
+        VAL_FILTER="$FILTER" \
+        VAL_SOURCE="$SOURCE" \
+        VAL_EXTRA_KEY="$GLOBAL_KEY" \
+        VAL_STATE_DIR="$STATE_DIR" \
+        "${timeout_cmd[@]}" "$hook" < "$stdin_src" || hook_exit=$?
+        if [[ $hook_exit -eq 0 ]]; then
             log "[HOOKS] OK: $(basename "$hook")"
+        elif [[ $hook_exit -eq 124 ]]; then
+            log "[VAL-ERROR] Hook $(basename "$hook") superó el timeout de ${HOOK_TIMEOUT_SECONDS}s."
+            (( ++hook_errors ))
         else
-            log "[VAL-ERROR] Hook $(basename "$hook") terminó con error. Continuando."
+            log "[VAL-ERROR] Hook $(basename "$hook") terminó con error ($hook_exit). Continuando."
             (( ++hook_errors ))
         fi
     done

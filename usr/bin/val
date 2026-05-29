@@ -118,6 +118,12 @@ fi
 # ---------------------------------------------------------------------------
 # Validación de configuración
 # ---------------------------------------------------------------------------
+# Sanitizar LOCAL_KEY_LIST: solo alfanumérico y guiones para evitar word-splitting con globs.
+if [[ -n "$LOCAL_KEY_LIST" ]] && ! [[ "$LOCAL_KEY_LIST" =~ ^[a-zA-Z0-9_\ -]+$ ]]; then
+    log "[ERROR] LOCAL_KEY_LIST contiene caracteres no permitidos: '$LOCAL_KEY_LIST'. Solo se admiten letras, números, guiones y espacios."
+    exit 1
+fi
+
 log "=== Iniciando val ==="
 log "SOURCE:         $SOURCE"
 log "FILTER:         $FILTER"
@@ -407,7 +413,7 @@ while true; do
     # direction=upstream: datos llegando desde VAS/VAC hacia VAL.
     if [[ "$USE_VAT" == "true" && -n "$VAT_PRESET" ]]; then
         if command -v vat-operate &>/dev/null; then
-            local vat_out
+            vat_out=
             vat_out="$(vat-operate --source-component VAL --direction upstream \
                 --preset "$VAT_PRESET" < "$CLIENTS_FILE" 2>/dev/null)" \
             && echo "$vat_out" > "${CLIENTS_FILE}.tmp" \

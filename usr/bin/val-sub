@@ -62,6 +62,8 @@ GLOBAL_KEY=""
 LOCAL_KEY_LIST=""
 DISPATCH_STDIN="true"
 BUMP_LISTEN_PORT="0"
+USE_VAT="false"
+VAT_PRESET=""
 
 # ---------------------------------------------------------------------------
 # Carga de configuración
@@ -86,6 +88,8 @@ load_conf() {
             LOCAL_KEY_LIST)   LOCAL_KEY_LIST="$val";   (( ++loaded )) ;;
             DISPATCH_STDIN)   DISPATCH_STDIN="$val";   (( ++loaded )) ;;
             BUMP_LISTEN_PORT) BUMP_LISTEN_PORT="$val"; (( ++loaded )) ;;
+            USE_VAT)          USE_VAT="$val";          (( ++loaded )) ;;
+            VAT_PRESET)       VAT_PRESET="$val";       (( ++loaded )) ;;
         esac
     done < <(grep -v '^\s*#' "$file" | grep '=' || true)
 }

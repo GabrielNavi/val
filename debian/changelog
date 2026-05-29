@@ -1,3 +1,24 @@
+vx-dga-l-val (0.9-10~rc) unstable; urgency=low
+
+  * debian/postinst: añadido exit 0 explícito al final, alineado con
+    el resto de scripts de mantenimiento del ecosistema.
+
+ -- Gabriel Navia <correos@gabrielnav.es>  Thu, 29 May 2026 11:00:00 +0200
+
+vx-dga-l-val (0.9-9~rc) unstable; urgency=low
+
+  * val: corregido 'local vat_out' en el cuerpo del bucle while true
+    (fuera de función) — producía 'local: can only be used in a function'
+    con exit 1 bajo set -e, matando el daemon en el primer ciclo con
+    USE_VAT=true. Cambiado a 'vat_out='.
+  * val-sub: añadidos USE_VAT y VAT_PRESET al parser load_conf y defaults,
+    permitiendo activar VAT en sub-instancias independientes.
+  * val: validación de LOCAL_KEY_LIST al arrancar — rechaza caracteres de
+    glob (*, ?) que causarían expansión de nombres de fichero en el bucle
+    'for key in $LOCAL_KEY_LIST'.
+
+ -- Gabriel Navia <correos@gabrielnav.es>  Thu, 29 May 2026 10:00:00 +0200
+
 vx-dga-l-val (0.9-8~rc) unstable; urgency=low
 
   * debian/control: Suggests: vx-dga-l-vat.

@@ -25,3 +25,4 @@ if [ "$1" = "configure" ]; then
 fi
 
 echo "[val] Instalacion completada."
+exit 0

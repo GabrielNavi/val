@@ -23,6 +23,7 @@ TMP_CLIENTS="${TMP_CLIENTS:-${STATE_DIR}/clients.json.tmp}"
 # ---------------------------------------------------------------------------
 SOURCE="${SOURCE:-vas}"
 VAS_HOST="${VAS_HOST:-}"
+VAS_SCHEME="${VAS_SCHEME:-http}"
 VAC_STATE_DIR="${VAC_STATE_DIR:-/var/lib/vac}"
 FILTER="${FILTER:-active}"
 CHECK_SECONDS="${CHECK_SECONDS:-300}"
@@ -82,6 +83,7 @@ load_conf() {
         case "$key" in
             SOURCE)               SOURCE="$val";               (( ++loaded )) ;;
             VAS_HOST)             VAS_HOST="$val";             (( ++loaded )) ;;
+            VAS_SCHEME)           VAS_SCHEME="$val";           (( ++loaded )) ;;
             VAC_STATE_DIR)        VAC_STATE_DIR="$val";        (( ++loaded )) ;;
             FILTER)               FILTER="$val";               (( ++loaded )) ;;
             CHECK_SECONDS)        CHECK_SECONDS="$val";        (( ++loaded )) ;;
@@ -104,6 +106,24 @@ load_conf() {
 }
 
 # ---------------------------------------------------------------------------
+# Normalización de VAS_HOST
+# ---------------------------------------------------------------------------
+_normalize_vas_host() {
+    if [[ "$VAS_HOST" =~ ^(https?)://(.+) ]]; then
+        local extracted="${BASH_REMATCH[1]}"
+        VAS_HOST="${BASH_REMATCH[2]}"
+        [[ "$extracted" != "$VAS_SCHEME" ]] && \
+            log "[WARN] VAS_HOST contenía scheme '$extracted'; extraído a VAS_SCHEME. Usa VAS_SCHEME=$extracted en val.conf."
+        VAS_SCHEME="$extracted"
+    fi
+    VAS_HOST="${VAS_HOST%/}"
+    if [[ -n "$VAS_HOST" && ! "$VAS_HOST" =~ :[0-9]+$ ]]; then
+        VAS_HOST="${VAS_HOST}:8000"
+        log_debug "[CONFIG] Puerto implícito añadido: VAS_HOST=$VAS_HOST"
+    fi
+}
+
+# ---------------------------------------------------------------------------
 # Versión remota
 # ---------------------------------------------------------------------------
 get_remote_version() {
@@ -111,7 +131,7 @@ get_remote_version() {
     case "$SOURCE" in
         vas)
             ver="$(curl -fsS --max-time 10 --connect-timeout 5 \
-                "${VAS_HOST%/}/version" 2>/dev/null \
+                "${VAS_SCHEME}://${VAS_HOST}/version" 2>/dev/null \
                 | jq -r '.version' 2>/dev/null \
                 || echo "")"
             log_debug "[VERSION] Versión remota (VAS): ${ver:-(vacía)}"
@@ -138,7 +158,7 @@ get_remote_version() {
 fetch_clients() {
     case "$SOURCE" in
         vas)
-            local url="${VAS_HOST%/}/clients"
+            local url="${VAS_SCHEME}://${VAS_HOST}/clients"
             local params=""
             [[ "$FILTER" != "active" ]] && params="status=${FILTER}"
             [[ -n "$GLOBAL_KEY" ]] && params="${params:+${params}&}extra_key=${GLOBAL_KEY}"

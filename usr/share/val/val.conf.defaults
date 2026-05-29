@@ -2,83 +2,140 @@
 # Configuración activa:    /etc/val/val.conf
 # Sobreescrituras:         /etc/val/val.conf.d/*.conf
 
-# Configuración de val (Versatile Autoregistration Listener)
-# Modifica este fichero para ajustar el comportamiento sin reinstalar el paquete.
-# Añade sobreescrituras en /etc/val/val.conf.d/*.conf
-# (se aplican en orden lexical, después de este archivo).
+# ---------------------------------------------------------------------------
+# Fuente de datos
+# ---------------------------------------------------------------------------
 
-# Fuente de datos del inventario:
-#   vas  → consulta VAS directamente via HTTP (recomendado)
-#   vac  → lee la copia local descargada por VAC (/var/lib/vac/clients.json)
+# Fuente del inventario que VAL observa.
+# vas → consulta VAS directamente via HTTP (recomendado).
+# vac → lee la copia local descargada por VAC (/var/lib/vac/clients.json).
+#       Requiere SYNC_CLIENTS=true en vac.conf. No soporta FILTER != active
+#       ni GLOBAL_KEY.
 SOURCE=vas
 
-# URL del servidor VAS (solo con SOURCE=vas)
-VAS_HOST="http://127.0.0.1:8000"
+# ---------------------------------------------------------------------------
+# Conexión al servidor VAS (solo con SOURCE=vas)
+# ---------------------------------------------------------------------------
 
-# Filtro de clientes distribuidos a los hooks:
-#   active    → solo clientes activos       (compatible con SOURCE=vas y SOURCE=vac)
-#   inactive  → solo clientes inactivos     (requiere SOURCE=vas)
-#   archived  → solo clientes archivados    (requiere SOURCE=vas)
-#   all       → todos los clientes          (requiere SOURCE=vas)
-FILTER=active
+# IP o hostname del servidor VAS. No incluir scheme (http/https) ni barra final.
+# Puerto implícito :8000 si no se especifica.
+# Si VAS_HOST incluye scheme (http://...) se extrae automáticamente con [WARN].
+# Ejemplos:
+#   VAS_HOST=10.0.0.1            → http://10.0.0.1:8000
+#   VAS_HOST=10.0.0.1:9000       → http://10.0.0.1:9000
+#   VAS_HOST=vas.ejemplo.org     → http://vas.ejemplo.org:8000
+VAS_HOST="127.0.0.1"
 
-# Segundos entre comprobaciones de versión
-CHECK_SECONDS=300
+# Esquema de conexión: http (default) | https.
+# Para https, VAS debe estar detrás de un proxy TLS (nginx, HAProxy).
+# VAS_SCHEME=http
 
-# Segundos de espera ante errores de conexión o hooks fallidos
-RETRY_SECONDS=60
+# ---------------------------------------------------------------------------
+# Fuente VAC (solo con SOURCE=vac)
+# ---------------------------------------------------------------------------
 
-# Directorio con los scripts hook.
-# Los scripts deben ser ejecutables. Se invocan en orden lexical.
-# Cada hook recibe el inventario JSON por stdin y las variables:
-#   VAL_VERSION, VAL_FILTER, VAL_SOURCE
-HOOKS_DIR=/etc/val/hooks.d
-
-# Directorio de estado de VAC (solo con SOURCE=vac)
+# Ruta al directorio de estado de VAC con clients.json y version.
 VAC_STATE_DIR=/var/lib/vac
 
-# Filtro global de clave extra enviado a VAS: solo descarga clientes que
-# tengan esta clave en extra_imperative o extra_informative.
-# Vacío = sin filtro (inventario completo). Solo aplica con SOURCE=vas.
-# Útil para agrupar equipos por rol/aula usando una key "dummy" en VAC.
+# ---------------------------------------------------------------------------
+# Filtros y descarga
+# ---------------------------------------------------------------------------
+
+# Filtro de clientes distribuidos a los hooks.
+# active   → solo clientes activos       (compatible con SOURCE=vas y SOURCE=vac).
+# inactive → solo clientes inactivos     (requiere SOURCE=vas).
+# archived → solo clientes archivados    (requiere SOURCE=vas).
+# all      → todos los clientes          (requiere SOURCE=vas).
+FILTER=active
+
+# Filtro global de clave extra enviado a VAS en GET /clients.
+# Solo descarga clientes que tengan esta clave en extra_imperative o extra_informative.
+# Vacío = inventario completo. Solo aplica con SOURCE=vas.
 GLOBAL_KEY=
 
 # Lista de claves a materializar como ficheros locales tras cada descarga.
-# VAL escribe STATE_DIR/KEY_clients.json por cada clave, con los clientes
-# que tienen esa clave en extra_imperative o extra_informative.
-# Vacío = sin materialización. Las claves se separan por espacios.
-# Práctica recomendada: los hooks leen VAL_STATE_DIR/KEY_clients.json
-# en lugar de procesar el inventario completo por stdin.
+# VAL escribe STATE_DIR/KEY_clients.json por cada clave.
+# Vacío = sin materialización. Claves separadas por espacios.
+# Los hooks leen VAL_STATE_DIR/KEY_clients.json en lugar del inventario completo.
 LOCAL_KEY_LIST=
 
+# ---------------------------------------------------------------------------
+# Temporizadores
+# ---------------------------------------------------------------------------
+
+# Segundos entre comprobaciones de versión remota.
+CHECK_SECONDS=300
+
+# Segundos de espera ante errores de conexión o version inválida.
+RETRY_SECONDS=60
+
+# ---------------------------------------------------------------------------
+# Hooks
+# ---------------------------------------------------------------------------
+
+# Directorio con los scripts hook. Ejecutables en orden lexical.
+# Cada hook recibe el inventario JSON por stdin (si DISPATCH_STDIN=true).
+# Variables de entorno: VAL_VERSION, VAL_FILTER, VAL_SOURCE, VAL_EXTRA_KEY, VAL_STATE_DIR.
+# Exit != 0 → warning en log, continúa con el siguiente hook.
+HOOKS_DIR=/etc/val/hooks.d
+
 # Envío del inventario por stdin a los hooks.
-# true  = comportamiento actual (compatible con hooks existentes).
-# false = hooks no reciben stdin; deben leer VAL_STATE_DIR/KEY_clients.json.
-# Práctica recomendada para hooks nuevos: DISPATCH_STDIN=false.
+# true  → hooks reciben JSON completo por stdin (compatible con hooks existentes).
+# false → hooks no reciben stdin; leen VAL_STATE_DIR/KEY_clients.json.
+#         Recomendado para hooks nuevos: menos memoria, más eficiente.
 DISPATCH_STDIN=true
 
-# Puerto UDP de escucha para notificación push desde VAS (modo VAL-Aware).
-# 0 = desactivado (solo polling periódico, comportamiento por defecto).
-# Con valor distinto de 0, VAL escucha datagramas UDP en ese puerto.
-# Cualquier datagrama recibido interrumpe el sleep del ciclo normal (CHECK_SECONDS)
-# y dispara una consulta inmediata a /version. Los sleeps de error (RETRY_SECONDS)
-# no son interrumpibles.
+# Timeout por hook en dispatch_hooks (segundos).
+# Un hook que supere este límite se cancela (SIGTERM) y se registra como error.
+# 0 = sin límite (no recomendado: un hook colgado bloquea VAL indefinidamente).
+HOOK_TIMEOUT_SECONDS=30
+
+# ---------------------------------------------------------------------------
+# Bump listener (VAL-Aware)
+# ---------------------------------------------------------------------------
+
+# Puerto UDP de escucha para notificaciones push de VAS.
+# 0 = desactivado (solo polling periódico con CHECK_SECONDS).
+# Con valor distinto de 0, cualquier datagrama UDP recibido interrumpe el sleep
+# de CHECK_SECONDS y dispara una consulta inmediata a /version.
 # Requiere el hook val-local activo en /etc/vas/hooks.d/ del servidor VAS,
 # y que el equipo cliente publique en VAC:
-#   echo '{"url":"IP:PORT"}' | vac-register --imperative --key inform -
+#   vac-register --imperative --key inform '{"url":"IP:PUERTO"}'
 # Ejemplo: BUMP_LISTEN_PORT=9876
 BUMP_LISTEN_PORT=0
 
-# Timeout en segundos para cada hook en dispatch_hooks().
-# Un hook que supere este límite se cancela (SIGTERM) y se registra como error.
-# 0 = sin límite (no recomendado: un hook colgado bloquea VAL indefinidamente).
-# Consistente con el timeout=10 que VAC usa en sus extras-hooks.
-HOOK_TIMEOUT_SECONDS=30
+# ---------------------------------------------------------------------------
+# Logging
+# ---------------------------------------------------------------------------
 
-# Paralelización: lanza val-sub-manager al arrancar VAL.
-# Permite gestionar múltiples sub-instancias de VAL, cada una con su propio
-# SOURCE/VAS_HOST, hooks y estado, definidas en /etc/val/val.sub/*/val.conf.
-# true  → val arranca val-sub-manager en background al iniciar
-# false → sin sub-instancias (por defecto)
-# Gestión de sub-instancias: val-sub-instance --create NAME --vas URL
+# Nivel de log: no (silencio total) | normal (eventos importantes) | debug (detallado).
+# Filtrar debug en journalctl: journalctl -u val | grep '\[DEBUG\]'
+LOG_LEVEL=normal
+
+# Fichero de log adicional con timestamp ISO-8601 UTC.
+# Vacío = solo stdout (capturado por journald cuando corre como servicio).
+# LOG_FILE=/var/log/val/val.log
+
+# ---------------------------------------------------------------------------
+# Paralelización (sub-instancias)
+# ---------------------------------------------------------------------------
+
+# Lanzar val-sub-manager al arrancar VAL para gestionar sub-instancias.
+# Cada sub-instancia en /etc/val/val.sub/<name>/ observa una fuente distinta
+# (SOURCE/VAS_HOST propios) con sus propios hooks y estado.
+# true  → val arranca val-sub-manager en background.
+# false → sin sub-instancias (default).
+# Gestión: val-sub-instance --create NAME --vas URL
 PARALLELIZATION=false
+
+# ---------------------------------------------------------------------------
+# Transformación VAT
+# ---------------------------------------------------------------------------
+
+# Aplicar transformación VAT al inventario descargado.
+# Requiere paquete vx-dga-l-vat instalado.
+# Se aplica en dos puntos:
+#   upstream   → clients.json recién descargado, antes de materializar.
+#   downstream → cada KEY_clients.json tras materialize_keys, antes de hooks.
+# USE_VAT=false
+# VAT_PRESET=

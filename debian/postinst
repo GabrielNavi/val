@@ -20,6 +20,12 @@ if [ "$1" = "configure" ]; then
     if [ -n "${2:-}" ]; then
         systemctl restart val.service || true
     else
+        # Si es una instalación nueva, asegurarse de que el puerto de escucha no esté deshabilitado por defecto.
+        VAL_CONF="/etc/val/val.conf"
+        if [ -f "$VAL_CONF" ] && grep -q '^BUMP_LISTEN_PORT=0$' "$VAL_CONF" 2>/dev/null; then
+            sed -i 's/^BUMP_LISTEN_PORT=0$/BUMP_LISTEN_PORT=9876/' "$VAL_CONF"
+            echo "[val] BUMP_LISTEN_PORT=9876 activado en val.conf."
+        fi
         systemctl start val.service || true
     fi
 fi

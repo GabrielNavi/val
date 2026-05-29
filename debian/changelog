@@ -1,3 +1,12 @@
+vx-dga-l-val (0.9-14~rc) unstable; urgency=low
+
+  * postinst: en instalación fresca, activa BUMP_LISTEN_PORT=9876 en
+    val.conf (sustituye el 0 por defecto). En upgrade no se toca val.conf
+    para respetar la decisión del admin. Necesario para que el hook val-local
+    de VAS pueda enviar notificaciones push UDP a VAL-Aware.
+
+ -- Gabriel Navia <correos@gabrielnav.es>  Fri, 30 May 2026 10:00:00 +0200
+
 vx-dga-l-val (0.9-13~rc) unstable; urgency=low
 
   * val-common.sh: nueva variable VAS_SCHEME (default: http) y función

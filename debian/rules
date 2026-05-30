@@ -2,3 +2,7 @@
 
 %:
 	dh $@
+
+override_dh_installsystemd:
+	dh_installsystemd --name=val
+	dh_installsystemd --name=val-sub --no-enable --no-start

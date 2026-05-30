@@ -1,0 +1,78 @@
+.TH VAL-SUB-INSTANCE 8 "2026-05-30" "vx-dga-l-val" "System Administration"
+.SH NAME
+val-sub-instance \- Lifecycle management for VAL sub-instances
+.SH SYNOPSIS
+.B val-sub-instance \-\-create
+.I NAME
+.RB [ \-\-vas
+.IR URL
+|
+.B \-\-source
+.BR vac ]
+.br
+.B val-sub-instance \-\-delete
+.I NAME
+.br
+.B val-sub-instance \-\-list
+.SH DESCRIPTION
+.B val-sub-instance
+creates, deletes, and lists
+.BR val-sub (8)
+instances. Each sub-instance can listen to a different VAS server or use
+a different filter and set of hooks.
+.SH OPTIONS
+.TP
+.BI \-\-create " NAME"
+Creates a new sub-instance named
+.IR NAME .
+The configuration skeleton is copied from
+.I /usr/share/val/instance-template/val.conf
+and written to
+.IR /etc/val/val.sub/NAME/ .
+A
+.I .enabled
+marker is created so
+.BR val-sub-manager (8)
+starts the instance immediately on the next scan.
+.TP
+.BI \-\-vas " URL"
+Set
+.B VAS_HOST
+in the new sub-instance configuration (implies
+.BR SOURCE=vas ).
+.TP
+.B \-\-source vac
+Set
+.B SOURCE=vac
+in the new sub-instance configuration.
+.TP
+.BI \-\-delete " NAME"
+Removes the configuration and state for sub-instance
+.IR NAME .
+Aborts if the
+.BR val-sub (8)
+process is currently active.
+.TP
+.B \-\-list
+Displays a table with each sub-instance's name, source, VAS host, and
+current status.
+.SH FILES
+.TP
+.I /etc/val/val.sub/NAME/val.conf
+Sub-instance configuration.
+.TP
+.I /etc/val/val.sub/NAME/.enabled
+Enables the sub-instance in
+.BR val-sub-manager (8).
+.TP
+.I /var/lib/val/sub/NAME/
+Runtime state directory.
+.TP
+.I /usr/share/val/instance-template/val.conf
+Template used when creating new sub-instances.
+.SH SEE ALSO
+.BR val-sub (8),
+.BR val-sub-manager (8),
+.BR val (8)
+.SH AUTHOR
+Gabriel Navia <correos@gabrielnav.es>

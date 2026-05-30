@@ -1,0 +1,50 @@
+.TH VAL-SUB 8 "2026-05-30" "vx-dga-l-val" "System Administration"
+.SH NAME
+val-sub \- VAL sub-instance daemon
+.SH SYNOPSIS
+.B val-sub
+.I NAME
+.SH DESCRIPTION
+.B val-sub
+runs the full VAL listener loop for a named sub-instance, allowing a
+single host to listen to multiple VAS servers or apply different filters
+and hooks simultaneously.
+.PP
+It inherits the base configuration from
+.I /etc/val/val.conf
+and overrides it with
+.IR /etc/val/val.sub/NAME/val.conf .
+State and materialised key views are stored independently in
+.IR /var/lib/val/sub/NAME/ .
+.PP
+The UDP bump FIFO is also independent per sub-instance
+.RI ( /var/run/val/sub/NAME.bump.fifo )
+so each sub-instance can have its own
+.B BUMP_LISTEN_PORT
+without conflict.
+.PP
+Log messages are prefixed with
+.BI [ NAME-VAL ]
+to allow filtering with
+.IR journalctl .
+.PP
+.B val-sub
+is normally launched and supervised by
+.BR val-sub-manager (8).
+.SH FILES
+.TP
+.I /etc/val/val.sub/NAME/val.conf
+Sub-instance configuration.
+.TP
+.I /etc/val/val.sub/NAME/.enabled
+Enables the sub-instance in
+.BR val-sub-manager (8).
+.TP
+.I /var/lib/val/sub/NAME/
+State directory: version, clients.json, materialised key views.
+.SH SEE ALSO
+.BR val (8),
+.BR val-sub-manager (8),
+.BR val-sub-instance (8)
+.SH AUTHOR
+Gabriel Navia <correos@gabrielnav.es>

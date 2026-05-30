@@ -43,8 +43,9 @@ STATE_DIR="/var/lib/val/sub/${NAME}"
 CONF_FILE="${INSTANCE_DIR}/val.conf"
 CONF_DIR="${INSTANCE_DIR}/val.conf.d"
 HOOKS_DIR="${INSTANCE_DIR}/hooks.d"
+# shellcheck disable=SC2034  # LOG_TAG es usado por log()/log_debug() en val-common.sh
 LOG_TAG="[${NAME^^}-VAL]"
-
+# shellcheck source=/usr/lib/val/val-common.sh
 source /usr/lib/val/val-common.sh
 
 # ---------------------------------------------------------------------------
@@ -59,6 +60,11 @@ if [[ -d "$CONF_DIR" ]]; then
     done
 fi
 _normalize_vas_host
+# Re-aplicar rutas de instancia: load_conf hereda val.conf y puede sobreescribirlas.
+HOOKS_DIR="${INSTANCE_DIR}/hooks.d"
+# Sub-instancias no heredan el BUMP_LISTEN_PORT del principal (evita conflicto de puerto).
+# Cada sub-instancia debe configurar su propio puerto en su val.conf si lo necesita.
+[[ -z "$(grep -s "^BUMP_LISTEN_PORT" "$CONF_FILE")" ]] && BUMP_LISTEN_PORT=0
 
 # ---------------------------------------------------------------------------
 # Inicialización

@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # val-common.sh — Funciones compartidas entre val y val-sub.
 #
 # Uso: source /usr/lib/val/val-common.sh

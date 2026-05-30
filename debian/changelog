@@ -1,3 +1,15 @@
+vx-dga-l-val (0.9-17~rc) unstable; urgency=low
+
+  * val-sub: BUMP_LISTEN_PORT deja de heredarse de la instancia principal; las
+    subinstancias arrancan con BUMP_LISTEN_PORT=0 salvo que su val.conf lo
+    defina, evitando conflictos de puerto.
+  * Se añaden manpages para val, val-sub, val-sub-manager y val-sub-instance y
+    el template de instancia incorpora BUMP_LISTEN_PORT/LOG_LEVEL.
+  * Paquetería: corregidos los destinos de systemd, ajustadas dependencias y
+    afinado dh_installsystemd para pasar lintian.
+
+ -- Gabriel Navia <correos@gabrielnav.es>  Sat, 30 May 2026 19:00:00 +0200
+
 vx-dga-l-val (0.9-16~rc) unstable; urgency=low
 
   * val-common.sh: fetch_clients() SOURCE=vac usa ahora escritura atómica
@@ -8,7 +20,7 @@ vx-dga-l-val (0.9-16~rc) unstable; urgency=low
     BUMP_LISTEN_PORT (activo/desactivado) sin contradicción con el [WARN]
     posterior. El bloque del listener recupera su forma original simple.
 
- -- Gabriel Navia <correos@gabrielnav.es>  Fri, 30 May 2026 18:00:00 +0200
+ -- Gabriel Navia <correos@gabrielnav.es>  Sat, 30 May 2026 18:00:00 +0200
 
 vx-dga-l-val (0.9-15~rc) unstable; urgency=low
 

@@ -30,8 +30,9 @@ set -euo pipefail
 # ---------------------------------------------------------------------------
 CONF_FILE="/etc/val/val.conf"
 CONF_DIR="/etc/val/val.conf.d"
+# shellcheck disable=SC2034  # LOG_TAG es usado por log()/log_debug() en val-common.sh
 LOG_TAG="[VAL]"
-
+# shellcheck source=/usr/lib/val/val-common.sh
 source /usr/lib/val/val-common.sh
 
 # ---------------------------------------------------------------------------

@@ -1,0 +1,4 @@
+debian/man/val.8
+debian/man/val-sub.8
+debian/man/val-sub-manager.8
+debian/man/val-sub-instance.8

@@ -21,6 +21,7 @@
 
 set -euo pipefail
 
+# shellcheck disable=SC2034  # LOG_TAG es usado por las funciones log() inline
 LOG_TAG="${LOG_TAG:-[VAL]}"
 MAX_FAILS=5
 MIN_UPTIME_SECS=30
@@ -137,7 +138,7 @@ while true; do
                 fails="${FAIL_COUNT[$name]}"
                 if (( fails >= MAX_FAILS )); then
                     log "[PARALLEL] ${name}-val falló ${fails} veces seguidas (uptime < ${MIN_UPTIME_SECS}s). Marcado como muerto."
-                    unset CHILD_PIDS[$name]
+                    unset "CHILD_PIDS[$name]"
                     continue
                 fi
                 log "[PARALLEL] ${name}-val terminó en ${uptime}s (fallo $fails/$MAX_FAILS). Reiniciando..."

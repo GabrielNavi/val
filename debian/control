@@ -7,7 +7,7 @@ Build-Depends: debhelper-compat (= 13)
 
 Package: vx-dga-l-val
 Architecture: all
-Depends: bash, curl, jq, coreutils, ${misc:Depends}
+Depends: curl, jq, ${misc:Depends}
 Recommends: vx-dga-l-vas | vx-dga-l-vac, netcat-openbsd
 Suggests: vx-dga-l-vat
 Description: Versatile Autoregistration Listener

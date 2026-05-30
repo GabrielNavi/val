@@ -17,7 +17,7 @@ vx-dga-l-val (0.9-15~rc) unstable; urgency=low
 
  -- Gabriel Navia <correos@gabrielnav.es>  Fri, 30 May 2026 12:00:00 +0200
 
-vx-dga-l-val (0.9-14~rc) unstable; urgency=low
+vx-dga-l-val (0.9-14) unstable; urgency=low
 
   * postinst: en instalación fresca, activa BUMP_LISTEN_PORT=9876 en
     val.conf (sustituye el 0 por defecto). En upgrade no se toca val.conf
@@ -26,7 +26,7 @@ vx-dga-l-val (0.9-14~rc) unstable; urgency=low
 
  -- Gabriel Navia <correos@gabrielnav.es>  Fri, 30 May 2026 10:00:00 +0200
 
-vx-dga-l-val (0.9-13~rc) unstable; urgency=low
+vx-dga-l-val (0.9-13) unstable; urgency=low
 
   * val-common.sh: nueva variable VAS_SCHEME (default: http) y función
     _normalize_vas_host(): extrae scheme de VAS_HOST si lo contiene (retrocompat
@@ -41,7 +41,7 @@ vx-dga-l-val (0.9-13~rc) unstable; urgency=low
 
  -- Gabriel Navia <correos@gabrielnav.es>  Thu, 29 May 2026 18:00:00 +0200
 
-vx-dga-l-val (0.9-12~rc) unstable; urgency=low
+vx-dga-l-val (0.9-12) unstable; urgency=low
 
   * Nuevo usr/lib/val/val-common.sh: librería compartida entre val y val-sub.
     Contiene defaults de configuración (patrón :-), logging con LOG_LEVEL
@@ -61,7 +61,7 @@ vx-dga-l-val (0.9-12~rc) unstable; urgency=low
 
  -- Gabriel Navia <correos@gabrielnav.es>  Thu, 29 May 2026 16:30:00 +0200
 
-vx-dga-l-val (0.9-11~rc) unstable; urgency=low
+vx-dga-l-val (0.9-11) unstable; urgency=low
 
   * val: nuevo HOOK_TIMEOUT_SECONDS (default: 30, 0=sin límite) — cada hook
     en dispatch_hooks() se ejecuta bajo `timeout $HOOK_TIMEOUT_SECONDS`.
@@ -71,14 +71,14 @@ vx-dga-l-val (0.9-11~rc) unstable; urgency=low
 
  -- Gabriel Navia <correos@gabrielnav.es>  Thu, 29 May 2026 14:30:00 +0200
 
-vx-dga-l-val (0.9-10~rc) unstable; urgency=low
+vx-dga-l-val (0.9-10) unstable; urgency=low
 
   * debian/postinst: añadido exit 0 explícito al final, alineado con
     el resto de scripts de mantenimiento del ecosistema.
 
  -- Gabriel Navia <correos@gabrielnav.es>  Thu, 29 May 2026 11:00:00 +0200
 
-vx-dga-l-val (0.9-9~rc) unstable; urgency=low
+vx-dga-l-val (0.9-9) unstable; urgency=low
 
   * val: corregido 'local vat_out' en el cuerpo del bucle while true
     (fuera de función) — producía 'local: can only be used in a function'
@@ -92,7 +92,7 @@ vx-dga-l-val (0.9-9~rc) unstable; urgency=low
 
  -- Gabriel Navia <correos@gabrielnav.es>  Thu, 29 May 2026 10:00:00 +0200
 
-vx-dga-l-val (0.9-8~rc) unstable; urgency=low
+vx-dga-l-val (0.9-8) unstable; urgency=low
 
   * debian/control: Suggests: vx-dga-l-vat.
   * README.md, wiki Configuracion.md: documentados USE_VAT y VAT_PRESET
@@ -100,7 +100,7 @@ vx-dga-l-val (0.9-8~rc) unstable; urgency=low
 
  -- Gabriel Navia <correos@gabrielnav.es>  Wed, 28 May 2026 21:00:00 +0200
 
-vx-dga-l-val (0.9-7~rc) unstable; urgency=low
+vx-dga-l-val (0.9-7) unstable; urgency=low
 
   * Integración opcional con vx-dga-l-vat (Versatile Autoregistration Transformer).
   * val: nuevas variables USE_VAT y VAT_PRESET en defaults y parser.
@@ -115,13 +115,13 @@ vx-dga-l-val (0.9-7~rc) unstable; urgency=low
 
  -- Gabriel Navia <correos@gabrielnav.es>  Wed, 28 May 2026 20:00:00 +0200
 
-vx-dga-l-val (0.9-6~rc) unstable; urgency=low
+vx-dga-l-val (0.9-6) unstable; urgency=low
 
   * debian/control: Standards-Version: 4.7.0.
 
  -- Gabriel Navia <correos@gabrielnav.es>  Wed, 28 May 2026 14:30:00 +0200
 
-vx-dga-l-val (0.9-5~rc) unstable; urgency=low
+vx-dga-l-val (0.9-5) unstable; urgency=low
 
   * val: corregido orden de definición — log() se define ahora antes de
     load_conf(), eliminando los echo directos que bypasaban LOG_LEVEL=no
@@ -134,7 +134,7 @@ vx-dga-l-val (0.9-5~rc) unstable; urgency=low
 
  -- Gabriel Navia <correos@gabrielnav.es>  Wed, 28 May 2026 12:00:00 +0200
 
-vx-dga-l-val (0.9-4~rc) unstable; urgency=low
+vx-dga-l-val (0.9-4) unstable; urgency=low
 
   * val, val-sub: FILTER acepta ahora 'archived' además de active/inactive/all.
     Alineado con los estados reales de VAS (active/inactive/archived/all).
@@ -145,7 +145,7 @@ vx-dga-l-val (0.9-4~rc) unstable; urgency=low
 
  -- Gabriel Navia <correos@gabrielnav.es>  Wed, 27 May 2026 22:00:00 +0200
 
-vx-dga-l-val (0.9-3~rc) unstable; urgency=medium
+vx-dga-l-val (0.9-3) unstable; urgency=medium
 
   * Paralelización: soporte para múltiples sub-instancias VAL concurrentes.
   * Nuevo binario val-sub <name>: bucle VAL standalone para una sub-instancia.
@@ -172,7 +172,7 @@ vx-dga-l-val (0.9-3~rc) unstable; urgency=medium
 
  -- Gabriel Navia <correos@gabrielnav.es>  Tue, 27 May 2026 20:00:00 +0200
 
-vx-dga-l-val (0.9-2~rc) unstable; urgency=medium
+vx-dga-l-val (0.9-2) unstable; urgency=medium
 
   * VAL-Aware: notificación push UDP para reducir latencia de reacción ante
     cambios en el inventario de VAS.
@@ -190,7 +190,7 @@ vx-dga-l-val (0.9-2~rc) unstable; urgency=medium
 
  -- Gabriel Navia <correos@gabrielnav.es>  Tue, 27 May 2026 19:00:00 +0200
 
-vx-dga-l-val (0.9-1~rc) unstable; urgency=medium
+vx-dga-l-val (0.9-1) unstable; urgency=medium
 
   * Filtrado por clave extra (GLOBAL_KEY): VAL envía ?extra_key=KEY a VAS,
     reduciendo el tráfico de red al inventario relevante para el consumidor.

@@ -64,6 +64,11 @@ if [[ -n "$LOCAL_KEY_LIST" ]] && ! [[ "$LOCAL_KEY_LIST" =~ ^[a-zA-Z0-9_\ -]+$ ]]
     exit 1
 fi
 
+if [[ "$BUMP_LISTEN_PORT" != "0" ]] && ! command -v nc &>/dev/null; then
+    log "[WARN] BUMP_LISTEN_PORT=$BUMP_LISTEN_PORT pero nc no está instalado (instala netcat-openbsd). VAL-Aware desactivado."
+    BUMP_LISTEN_PORT=0
+fi
+
 log "=== Iniciando val ==="
 log "SOURCE:           $SOURCE"
 log "FILTER:           $FILTER"

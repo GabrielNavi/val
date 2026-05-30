@@ -179,7 +179,7 @@ fetch_clients() {
         vac)
             local vac_clients="${VAC_STATE_DIR}/clients.json"
             if [[ -f "$vac_clients" ]]; then
-                cp "$vac_clients" "$CLIENTS_FILE"
+                cp "$vac_clients" "$TMP_CLIENTS" && mv "$TMP_CLIENTS" "$CLIENTS_FILE"
                 local count
                 count="$(jq '.clients | length' "$CLIENTS_FILE" 2>/dev/null || echo '?')"
                 log "[FETCH] Inventario copiado desde VAC: $CLIENTS_FILE ($count equipo(s))"

@@ -1,3 +1,15 @@
+vx-dga-l-val (0.9-16~rc) unstable; urgency=low
+
+  * val-common.sh: fetch_clients() SOURCE=vac usa ahora escritura atómica
+    (cp a tmp + mv) en lugar de cp directo. Evita que clients.json quede
+    corrupto si el proceso muere durante la copia.
+  * val, val-sub: el check de disponibilidad de nc se ejecuta antes del
+    bloque de startup log. El log refleja el estado efectivo de
+    BUMP_LISTEN_PORT (activo/desactivado) sin contradicción con el [WARN]
+    posterior. El bloque del listener recupera su forma original simple.
+
+ -- Gabriel Navia <correos@gabrielnav.es>  Fri, 30 May 2026 18:00:00 +0200
+
 vx-dga-l-val (0.9-15~rc) unstable; urgency=low
 
   * val-common.sh: PARALLELIZATION eliminado (no se lee). Nuevo PARALLEL_MODE

@@ -1,11 +1,4 @@
 #!/bin/sh
 set -e
 
-echo "[val] Ejecutando prerm..."
-
-if [ "$1" = "remove" ]; then
-    systemctl stop val.service || true
-    systemctl disable val.service || true
-fi
-
-exit 0
+#DEBHELPER#

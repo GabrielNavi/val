@@ -1,13 +1,8 @@
 #!/bin/sh
 set -e
 
-echo "[val] Ejecutando postrm..."
-
 if [ "$1" = "purge" ]; then
-    rm -rf /var/lib/val
-    rm -rf /etc/val
+    rm -rf /etc/val /var/lib/val
 fi
 
-systemctl daemon-reload || true
-
-exit 0
+#DEBHELPER#

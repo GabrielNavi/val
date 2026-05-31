@@ -4,7 +4,7 @@ set -e
 case "$1" in
     configure)
         mkdir -p /etc/val/val.conf.d /etc/val/hooks.d /etc/val/val.sub \
-                 /var/lib/val/sub
+                 /var/lib/val/sub /var/log/val
 
         if [ ! -f /var/lib/val/version ]; then
             echo "0" > /var/lib/val/version

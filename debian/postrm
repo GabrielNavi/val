@@ -2,7 +2,7 @@
 set -e
 
 if [ "$1" = "purge" ]; then
-    rm -rf /etc/val /var/lib/val
+    rm -rf /etc/val /var/lib/val /var/log/val
 fi
 
 #DEBHELPER#

@@ -179,7 +179,7 @@ while true; do
     materialize_keys
     dispatch_hooks "$remote_version"
 
-    echo "$remote_version" > "$VERSION_FILE"
+    write_version "$remote_version"
     log "[SYNC] Versión local actualizada: $remote_version"
     log "--- Ciclo completado. Próxima comprobación en ${CHECK_SECONDS}s. ---"
     interruptible_sleep "$CHECK_SECONDS"

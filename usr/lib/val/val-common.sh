@@ -311,3 +311,12 @@ interruptible_sleep() {
         sleep "$1"
     fi
 }
+
+# ---------------------------------------------------------------------------
+# Escritura atómica del fichero de versión local
+# ---------------------------------------------------------------------------
+write_version() {
+    local ver="$1" tmp="${VERSION_FILE}.tmp"
+    echo "$ver" > "$tmp" && mv "$tmp" "$VERSION_FILE" \
+        || { rm -f "$tmp"; log "[WARN] No se pudo escribir VERSION_FILE."; }
+}

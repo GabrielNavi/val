@@ -1,4 +1,4 @@
-# vx-dga-l-val — Versatile Autoregistration Listener
+# versatile-autoreg-val — Versatile Autoregistration Listener
 
 Daemon de distribución de inventario. Observa cambios de versión en VAS o VAC y ejecuta scripts hook configurables con el inventario resultante. No modifica ni requiere cambios en VAS ni en VAC.
 
@@ -7,10 +7,10 @@ Casos de uso habituales: sincronización de Veyon, configuración de CUPS, expor
 ## Ecosistema
 
 ```
-vx-dga-l-vas          → servidor de inventario
-vx-dga-l-vac          → cliente de autoregistro
-vx-dga-l-val          → consumidor genérico con hooks (este paquete)
-vx-dga-l-veyon-sync   → integración Veyon (consumidor especializado)
+versatile-autoreg-vas          → servidor de inventario
+versatile-autoreg-vac          → cliente de autoregistro
+versatile-autoreg-val          → consumidor genérico con hooks (este paquete)
+versatile-autoreg-veyon-sync   → integración Veyon (consumidor especializado)
 ```
 
 ## Requisitos

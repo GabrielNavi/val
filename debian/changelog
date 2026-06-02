@@ -1,4 +1,4 @@
-vx-dga-l-val (0.9-18~rc) unstable; urgency=low
+versatile-autoreg-val (0.9-18~rc) unstable; urgency=low
 
   * val-common.sh: nueva función write_version() con rename atómico (tmp+mv)
     para la escritura del fichero de versión local. Coherente con VAS
@@ -7,7 +7,7 @@ vx-dga-l-val (0.9-18~rc) unstable; urgency=low
 
  -- Gabriel Navia <correos@gabrielnav.es>  Sun, 31 May 2026 09:00:00 +0200
 
-vx-dga-l-val (0.9-17~rc) unstable; urgency=low
+versatile-autoreg-val (0.9-17~rc) unstable; urgency=low
 
   * val-sub: BUMP_LISTEN_PORT deja de heredarse de la instancia principal; las
     subinstancias arrancan con BUMP_LISTEN_PORT=0 salvo que su val.conf lo
@@ -19,7 +19,7 @@ vx-dga-l-val (0.9-17~rc) unstable; urgency=low
 
  -- Gabriel Navia <correos@gabrielnav.es>  Sat, 30 May 2026 19:00:00 +0200
 
-vx-dga-l-val (0.9-16~rc) unstable; urgency=low
+versatile-autoreg-val (0.9-16~rc) unstable; urgency=low
 
   * val-common.sh: fetch_clients() SOURCE=vac usa ahora escritura atómica
     (cp a tmp + mv) en lugar de cp directo. Evita que clients.json quede
@@ -31,7 +31,7 @@ vx-dga-l-val (0.9-16~rc) unstable; urgency=low
 
  -- Gabriel Navia <correos@gabrielnav.es>  Sat, 30 May 2026 18:00:00 +0200
 
-vx-dga-l-val (0.9-15~rc) unstable; urgency=low
+versatile-autoreg-val (0.9-15~rc) unstable; urgency=low
 
   * val-common.sh: PARALLELIZATION eliminado (no se lee). Nuevo PARALLEL_MODE
     (both|only_parallel|only_main, default: both).
@@ -50,7 +50,7 @@ vx-dga-l-val (0.9-15~rc) unstable; urgency=low
 
  -- Gabriel Navia <correos@gabrielnav.es>  Fri, 30 May 2026 12:00:00 +0200
 
-vx-dga-l-val (0.9-14) unstable; urgency=low
+versatile-autoreg-val (0.9-14) unstable; urgency=low
 
   * postinst: en instalación fresca, activa BUMP_LISTEN_PORT=9876 en
     val.conf (sustituye el 0 por defecto). En upgrade no se toca val.conf
@@ -59,7 +59,7 @@ vx-dga-l-val (0.9-14) unstable; urgency=low
 
  -- Gabriel Navia <correos@gabrielnav.es>  Fri, 30 May 2026 10:00:00 +0200
 
-vx-dga-l-val (0.9-13) unstable; urgency=low
+versatile-autoreg-val (0.9-13) unstable; urgency=low
 
   * val-common.sh: nueva variable VAS_SCHEME (default: http) y función
     _normalize_vas_host(): extrae scheme de VAS_HOST si lo contiene (retrocompat
@@ -74,7 +74,7 @@ vx-dga-l-val (0.9-13) unstable; urgency=low
 
  -- Gabriel Navia <correos@gabrielnav.es>  Thu, 29 May 2026 18:00:00 +0200
 
-vx-dga-l-val (0.9-12) unstable; urgency=low
+versatile-autoreg-val (0.9-12) unstable; urgency=low
 
   * Nuevo usr/lib/val/val-common.sh: librería compartida entre val y val-sub.
     Contiene defaults de configuración (patrón :-), logging con LOG_LEVEL
@@ -94,7 +94,7 @@ vx-dga-l-val (0.9-12) unstable; urgency=low
 
  -- Gabriel Navia <correos@gabrielnav.es>  Thu, 29 May 2026 16:30:00 +0200
 
-vx-dga-l-val (0.9-11) unstable; urgency=low
+versatile-autoreg-val (0.9-11) unstable; urgency=low
 
   * val: nuevo HOOK_TIMEOUT_SECONDS (default: 30, 0=sin límite) — cada hook
     en dispatch_hooks() se ejecuta bajo `timeout $HOOK_TIMEOUT_SECONDS`.
@@ -104,14 +104,14 @@ vx-dga-l-val (0.9-11) unstable; urgency=low
 
  -- Gabriel Navia <correos@gabrielnav.es>  Thu, 29 May 2026 14:30:00 +0200
 
-vx-dga-l-val (0.9-10) unstable; urgency=low
+versatile-autoreg-val (0.9-10) unstable; urgency=low
 
   * debian/postinst: añadido exit 0 explícito al final, alineado con
     el resto de scripts de mantenimiento del ecosistema.
 
  -- Gabriel Navia <correos@gabrielnav.es>  Thu, 29 May 2026 11:00:00 +0200
 
-vx-dga-l-val (0.9-9) unstable; urgency=low
+versatile-autoreg-val (0.9-9) unstable; urgency=low
 
   * val: corregido 'local vat_out' en el cuerpo del bucle while true
     (fuera de función) — producía 'local: can only be used in a function'
@@ -125,17 +125,17 @@ vx-dga-l-val (0.9-9) unstable; urgency=low
 
  -- Gabriel Navia <correos@gabrielnav.es>  Thu, 29 May 2026 10:00:00 +0200
 
-vx-dga-l-val (0.9-8) unstable; urgency=low
+versatile-autoreg-val (0.9-8) unstable; urgency=low
 
-  * debian/control: Suggests: vx-dga-l-vat.
+  * debian/control: Suggests: versatile-autoreg-vat.
   * README.md, wiki Configuracion.md: documentados USE_VAT y VAT_PRESET
     con tabla de los dos puntos de saneamiento y semántica de direcciones.
 
  -- Gabriel Navia <correos@gabrielnav.es>  Wed, 28 May 2026 21:00:00 +0200
 
-vx-dga-l-val (0.9-7) unstable; urgency=low
+versatile-autoreg-val (0.9-7) unstable; urgency=low
 
-  * Integración opcional con vx-dga-l-vat (Versatile Autoregistration Transformer).
+  * Integración opcional con versatile-autoreg-vat (Versatile Autoregistration Transformer).
   * val: nuevas variables USE_VAT y VAT_PRESET en defaults y parser.
   * val: dos puntos de saneamiento con semántica de dirección explícita:
     - upstream (direction=upstream): clients.json recién descargado de VAS/VAC,
@@ -148,13 +148,13 @@ vx-dga-l-val (0.9-7) unstable; urgency=low
 
  -- Gabriel Navia <correos@gabrielnav.es>  Wed, 28 May 2026 20:00:00 +0200
 
-vx-dga-l-val (0.9-6) unstable; urgency=low
+versatile-autoreg-val (0.9-6) unstable; urgency=low
 
   * debian/control: Standards-Version: 4.7.0.
 
  -- Gabriel Navia <correos@gabrielnav.es>  Wed, 28 May 2026 14:30:00 +0200
 
-vx-dga-l-val (0.9-5) unstable; urgency=low
+versatile-autoreg-val (0.9-5) unstable; urgency=low
 
   * val: corregido orden de definición — log() se define ahora antes de
     load_conf(), eliminando los echo directos que bypasaban LOG_LEVEL=no
@@ -167,7 +167,7 @@ vx-dga-l-val (0.9-5) unstable; urgency=low
 
  -- Gabriel Navia <correos@gabrielnav.es>  Wed, 28 May 2026 12:00:00 +0200
 
-vx-dga-l-val (0.9-4) unstable; urgency=low
+versatile-autoreg-val (0.9-4) unstable; urgency=low
 
   * val, val-sub: FILTER acepta ahora 'archived' además de active/inactive/all.
     Alineado con los estados reales de VAS (active/inactive/archived/all).
@@ -178,7 +178,7 @@ vx-dga-l-val (0.9-4) unstable; urgency=low
 
  -- Gabriel Navia <correos@gabrielnav.es>  Wed, 27 May 2026 22:00:00 +0200
 
-vx-dga-l-val (0.9-3) unstable; urgency=medium
+versatile-autoreg-val (0.9-3) unstable; urgency=medium
 
   * Paralelización: soporte para múltiples sub-instancias VAL concurrentes.
   * Nuevo binario val-sub <name>: bucle VAL standalone para una sub-instancia.
@@ -205,7 +205,7 @@ vx-dga-l-val (0.9-3) unstable; urgency=medium
 
  -- Gabriel Navia <correos@gabrielnav.es>  Tue, 27 May 2026 20:00:00 +0200
 
-vx-dga-l-val (0.9-2) unstable; urgency=medium
+versatile-autoreg-val (0.9-2) unstable; urgency=medium
 
   * VAL-Aware: notificación push UDP para reducir latencia de reacción ante
     cambios en el inventario de VAS.
@@ -219,11 +219,11 @@ vx-dga-l-val (0.9-2) unstable; urgency=medium
     Solo los sleeps de ciclo completado (CHECK_SECONDS) son interrumpibles;
     los sleeps de error (RETRY_SECONDS) no se ven afectados.
   * Cleanup en SIGTERM/SIGINT: mata nc, elimina FIFO.
-  * Compatible con val-local hook de VAS (ver vx-dga-l-vas >= 0.9-8~rc).
+  * Compatible con val-local hook de VAS (ver versatile-autoreg-vas >= 0.9-8~rc).
 
  -- Gabriel Navia <correos@gabrielnav.es>  Tue, 27 May 2026 19:00:00 +0200
 
-vx-dga-l-val (0.9-1) unstable; urgency=medium
+versatile-autoreg-val (0.9-1) unstable; urgency=medium
 
   * Filtrado por clave extra (GLOBAL_KEY): VAL envía ?extra_key=KEY a VAS,
     reduciendo el tráfico de red al inventario relevante para el consumidor.
@@ -245,7 +245,7 @@ vx-dga-l-val (0.9-1) unstable; urgency=medium
 
  -- Gabriel Navia <correos@gabrielnav.es>  Wed, 27 May 2026 12:00:00 +0200
 
-vx-dga-l-val (0.2-5) unstable; urgency=high
+versatile-autoreg-val (0.2-5) unstable; urgency=high
 
   * LA funcion log() redirigido a stderr (>&2) para evitar contaminación de stdout
     en get_remote_version(), que se invoca con $() y captura todo stdout.
@@ -254,14 +254,14 @@ vx-dga-l-val (0.2-5) unstable; urgency=high
 
  -- Gabriel Navia <correos@gabrielnav.es>  Thu, 15 May 2026 15:00:00 +0200
 
-vx-dga-l-val (0.2-4) unstable; urgency=low
+versatile-autoreg-val (0.2-4) unstable; urgency=low
 
   * postinst: corregido arranque del servicio; instalación nueva usa start
     en lugar de restart incondicionalmente (parity con VAC y VAS).
 
  -- Gabriel Navia <correos@gabrielnav.es>  Fri, 15 May 2026 12:00:00 +0200
 
-vx-dga-l-val (0.2-3) unstable; urgency=low
+versatile-autoreg-val (0.2-3) unstable; urgency=low
 
   * Añadido /usr/share/val/val.conf.defaults: copia de referencia de la
     configuración por defecto, siempre actualizada en upgrade.
@@ -270,14 +270,14 @@ vx-dga-l-val (0.2-3) unstable; urgency=low
 
  -- Gabriel Navia <correos@gabrielnav.es>  Fri, 15 May 2026 12:00:00 +0200
 
-vx-dga-l-val (0.2-2) unstable; urgency=low
+versatile-autoreg-val (0.2-2) unstable; urgency=low
 
   * Actualizado comentario de validación de versión a YYYYMMDDHHMMSSmmm.
     La regex ^[0-9]+$ ya era compatible; solo documentación.
 
  -- Gabriel Navia <correos@gabrielnav.es>  Thu, 14 May 2026 17:00:00 +0200
 
-vx-dga-l-val (0.2-1) unstable; urgency=medium
+versatile-autoreg-val (0.2-1) unstable; urgency=medium
 
   * Diseño extrapolado de VAC y VVS
     Daemon generico que observa cambios de version en VAS o VAC y distribuye
@@ -286,13 +286,13 @@ vx-dga-l-val (0.2-1) unstable; urgency=medium
 
  -- Gabriel Navia <correos@gabrielnav.es>  Thu, 14 May 2026 00:00:00 +0000
 
-vx-dga-l-val (0.1-2) unstable; urgency=medium
+versatile-autoreg-val (0.1-2) unstable; urgency=medium
 
   * Definicion de las funcionalidades de VAL y filtros de uso
 
  -- Gabriel Navia <correos@gabrielnav.es>  Thu, 14 May 2026 00:00:00 +0000
 
-vx-dga-l-val (0.1-1) unstable; urgency=medium
+versatile-autoreg-val (0.1-1) unstable; urgency=medium
 
   * Initial release.
 

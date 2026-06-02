@@ -139,7 +139,7 @@ PARALLEL_MODE=both
 # ---------------------------------------------------------------------------
 
 # Aplicar transformación VAT al inventario descargado.
-# Requiere paquete vx-dga-l-vat instalado.
+# Requiere paquete versatile-autoreg-vat instalado.
 # Se aplica en dos puntos:
 #   upstream   → clients.json recién descargado, antes de materializar.
 #   downstream → cada KEY_clients.json tras materialize_keys, antes de hooks.

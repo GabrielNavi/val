@@ -1,15 +1,15 @@
-Source: vx-dga-l-val
+Source: versatile-autoreg-val
 Section: admin
 Priority: optional
 Maintainer: Gabriel Navia <correos@gabrielnav.es>
 Standards-Version: 4.7.0
 Build-Depends: debhelper-compat (= 13)
 
-Package: vx-dga-l-val
+Package: versatile-autoreg-val
 Architecture: all
 Depends: curl, jq, ${misc:Depends}
-Recommends: vx-dga-l-vas | vx-dga-l-vac, netcat-openbsd
-Suggests: vx-dga-l-vat
+Recommends: versatile-autoreg-vas | versatile-autoreg-vac, netcat-openbsd
+Suggests: versatile-autoreg-vat
 Description: Versatile Autoregistration Listener
  Daemon generico que observa cambios de version en el inventario de VAS o VAC
  y distribuye el resultado filtrado a hooks configurables mediante tuberias.

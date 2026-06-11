@@ -130,11 +130,13 @@ Guía completa: [Configuración](https://github.com/GabrielNavi/val/wiki/ES_Conf
    ├─ Sin cambio → interruptible_sleep(CHECK_SECONDS)
    │               UDP bump recibido → ciclo inmediato
    └─ Con cambio →
-       2. fetch_clients()          [VAT upstream opcional]
-       3. materialize_keys()       [VAT downstream opcional]
+       2. fetch_clients()          [opcional: VAT --direction upstream]
+       3. materialize_keys()       [opcional: VAT --direction downstream]
        4. dispatch_hooks()         con timeout por hook
        5. Actualizar VERSION_FILE
 ```
+
+VAT (Transformador de Autoregistro Versátil) puede opcionalmente normalizar clientes al llegar (upstream) y filtrarlos antes de despachar hooks (downstream). Véase la [documentación VAT](https://github.com/GabrielNavi/vat) para la configuración.
 
 Más información: [Flujo de operación](https://github.com/GabrielNavi/val/wiki/ES_Flujo)
 

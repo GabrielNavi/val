@@ -4,7 +4,5 @@ usr/bin/val-sub usr/bin/
 usr/bin/val-sub-manager usr/bin/
 usr/bin/val-sub-instance usr/bin/
 etc/val/val.conf etc/val/
-lib/systemd/system/val.service usr/lib/systemd/system/
-lib/systemd/system/val-sub.service usr/lib/systemd/system/
 usr/share/val/val.conf.defaults usr/share/val/
 usr/share/val/instance-template/val.conf usr/share/val/instance-template/
